@@ -51,6 +51,18 @@ export class HUD {
         muteBtn.setText(muted ? "🔇" : "🔊");
       });
     }
+
+    scene.add
+      .text(
+        scene.scale.width / 2,
+        scene.scale.height - 16,
+        "WASD move  ·  SPACE/J attack  ·  K power  ·  E upgrades",
+        { fontFamily: "monospace", fontSize: "11px", color: "#666" }
+      )
+      .setOrigin(0.5, 1)
+      .setScrollFactor(0)
+      .setDepth(100)
+      .setAlpha(0.7);
   }
 
   private createEnergyBar(): void {
