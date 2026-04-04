@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { ZONES, type ZoneDefinition } from "@/data/zones";
 import { SpaceObject } from "@/entities/SpaceObject";
-import { WORLD_WIDTH, WORLD_HEIGHT } from "@/constants";
+import { WORLD_WIDTH, WORLD_HEIGHT, GRAVITY_CONSTANT, GRAVITY_SCALE } from "@/constants";
 import type { GravitySystem } from "@/systems/GravitySystem";
 
 const CENTER_X = WORLD_WIDTH / 2;
@@ -95,6 +95,32 @@ export class ZoneManager {
   }
 
   /** Returns true if the position is inside any gravity body's warning band. */
+  /**
+   * Compute tangential velocity for a stable circular orbit around the nearest major body.
+   */
+  private computeOrbitalVelocity(x: number, y: number): { vx: number; vy: number } {
+    if (!this.gravity) return { vx: 0, vy: 0 };
+    let nearestBody: { x: number; y: number; gravityMass: number } | null = null;
+    let nearestDist = Infinity;
+    for (const body of this.gravity.getBodies()) {
+      if (body.killRadius === undefined) continue;
+      const dist = Phaser.Math.Distance.Between(x, y, body.x, body.y);
+      if (dist < nearestDist) { nearestDist = dist; nearestBody = body; }
+    }
+    if (!nearestBody || nearestDist < 1) return { vx: 0, vy: 0 };
+
+    const orbitalSpeed = Math.sqrt(
+      GRAVITY_CONSTANT * nearestBody.gravityMass * GRAVITY_SCALE / nearestDist
+    );
+    const dx = nearestBody.x - x;
+    const dy = nearestBody.y - y;
+    const nx = dx / nearestDist;
+    const ny = dy / nearestDist;
+    const sign = Math.random() < 0.5 ? 1 : -1;
+    const perturb = 0.9 + Math.random() * 0.2;
+    return { vx: -ny * sign * orbitalSpeed * perturb, vy: nx * sign * orbitalSpeed * perturb };
+  }
+
   private isInsideBodyZone(x: number, y: number): boolean {
     if (!this.gravity) return false;
     for (const body of this.gravity.getBodies()) {
@@ -143,7 +169,8 @@ export class ZoneManager {
       if (!skipDistCheck && (distToPlayer < spawnMin || distToPlayer > spawnMax)) continue;
 
       const config = selected.factory();
-      const obj = new SpaceObject(this.scene, { x, y, ...config });
+      const { vx, vy } = this.computeOrbitalVelocity(x, y);
+      const obj = new SpaceObject(this.scene, { x, y, velocityX: vx, velocityY: vy, ...config });
       this.objects.push(obj);
       this.objectGroup.add(obj.sprite);
       return;
