@@ -15,7 +15,12 @@ export class HUD {
   private energyText!: Phaser.GameObjects.Text;
   private massText!: Phaser.GameObjects.Text;
   private tierText!: Phaser.GameObjects.Text;
-  private burstText!: Phaser.GameObjects.Text;
+  private tierProgressBg!: Phaser.GameObjects.Rectangle;
+  private tierProgressFill!: Phaser.GameObjects.Rectangle;
+  private weaponSlotBg!: Phaser.GameObjects.Rectangle;
+  private weaponSlotFill!: Phaser.GameObjects.Rectangle;
+  private weaponSlotLabel!: Phaser.GameObjects.Text;
+  private weaponSlotHint!: Phaser.GameObjects.Text;
   private combat: CombatSystem | null = null;
   private inputManager: InputManager | null = null;
   private controlsHint!: Phaser.GameObjects.Text;
@@ -38,7 +43,8 @@ export class HUD {
     this.createEnergyBar();
     this.createMassCounter();
     this.createTierIndicator();
-    this.createBurstText();
+    this.createTierProgress();
+    this.createWeaponSlot();
 
     if (audio) {
       const muteBtn = scene.add
@@ -131,16 +137,72 @@ export class HUD {
     this.objects.push(this.tierText);
   }
 
-  private createBurstText(): void {
-    this.burstText = this.scene.add
-      .text(20, 94, "", {
+  private createTierProgress(): void {
+    const x = 20;
+    const y = 88;
+    const width = 120;
+    const height = 6;
+
+    this.tierProgressBg = this.scene.add
+      .rectangle(x + width / 2, y + height / 2, width, height, 0x333333)
+      .setStrokeStyle(1, 0x6c63ff, 0.3)
+      .setScrollFactor(0)
+      .setDepth(100);
+    this.objects.push(this.tierProgressBg);
+
+    this.tierProgressFill = this.scene.add
+      .rectangle(x + 1, y + 1, 0, height - 2, 0x6c63ff)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(101);
+    this.objects.push(this.tierProgressFill);
+  }
+
+  private createWeaponSlot(): void {
+    const slotW = 100;
+    const slotH = 36;
+    const x = this.scene.scale.width - slotW - 12;
+    const y = 12;
+
+    // Background
+    this.weaponSlotBg = this.scene.add
+      .rectangle(x + slotW / 2, y + slotH / 2, slotW, slotH, 0x1a1a2e, 0.9)
+      .setStrokeStyle(1, 0xffd93d, 0.4)
+      .setScrollFactor(0)
+      .setDepth(100);
+    this.objects.push(this.weaponSlotBg);
+
+    // Cooldown fill bar (bottom of slot, fills left to right)
+    this.weaponSlotFill = this.scene.add
+      .rectangle(x + 2, y + slotH - 6, 0, 4, 0xffd93d)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(101);
+    this.objects.push(this.weaponSlotFill);
+
+    // Weapon name
+    this.weaponSlotLabel = this.scene.add
+      .text(x + slotW / 2, y + 10, "BURST", {
         fontFamily: "monospace",
         fontSize: "12px",
         color: "#ffd93d",
       })
+      .setOrigin(0.5, 0)
       .setScrollFactor(0)
-      .setDepth(100);
-    this.objects.push(this.burstText);
+      .setDepth(102);
+    this.objects.push(this.weaponSlotLabel);
+
+    // Button hint (below name)
+    this.weaponSlotHint = this.scene.add
+      .text(x + slotW / 2, y + 24, "", {
+        fontFamily: "monospace",
+        fontSize: "9px",
+        color: "#888",
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(102);
+    this.objects.push(this.weaponSlotHint);
   }
 
   update(): void {
@@ -164,11 +226,43 @@ export class HUD {
     );
 
     const tier = getTierForMass(this.resources.totalMassEarned);
-    this.tierText.setText(`Tier ${tier}: ${getTierName(tier)}`);
 
-    const canBurst = this.resources.canBurst && (this.combat?.burstCooldown ?? 0) <= 0;
-    this.burstText.setText(canBurst ? "BURST ready [SPC]" : "");
-    this.burstText.setColor(canBurst ? "#ffd93d" : "#555");
+    // Tier progress bar
+    const currentThreshold = tier <= 1 ? 0 : ([0, 0, 100, 500, 2000, 10000][tier] ?? 0);
+    const nextThreshold = [0, 100, 500, 2000, 10000, 50000][tier] ?? 50000;
+    const tierProgress = Math.min(1,
+      (this.resources.totalMassEarned - currentThreshold) / Math.max(1, nextThreshold - currentThreshold)
+    );
+    this.tierProgressFill.width = 118 * tierProgress; // 120 - 2px border
+    this.tierText.setText(
+      `Tier ${tier}: ${getTierName(tier)}  (${Math.floor(this.resources.totalMassEarned)}/${nextThreshold})`
+    );
+
+    // Weapon slot: burst cooldown
+    if (this.combat) {
+      const cooldownMax = this.combat.burstCooldownMax;
+      const cooldownLeft = Math.max(0, this.combat.burstCooldown);
+      const cooldownProgress = 1 - (cooldownLeft / cooldownMax); // 0 = just fired, 1 = ready
+      const canBurst = this.resources.canBurst && cooldownLeft <= 0;
+
+      this.weaponSlotFill.width = (100 - 4) * cooldownProgress; // slotW - 4px border
+
+      if (canBurst) {
+        this.weaponSlotFill.setFillStyle(0xffd93d, 1.0);
+        this.weaponSlotBg.setStrokeStyle(1, 0xffd93d, 0.6);
+        this.weaponSlotLabel.setColor("#ffd93d");
+      } else {
+        this.weaponSlotFill.setFillStyle(0xffd93d, 0.4);
+        this.weaponSlotBg.setStrokeStyle(1, 0xffd93d, 0.2);
+        this.weaponSlotLabel.setColor("#777");
+      }
+
+      if (this.inputManager?.isGamepad) {
+        this.weaponSlotHint.setText("[A]");
+      } else {
+        this.weaponSlotHint.setText("[SPACE]");
+      }
+    }
 
     // Switch controls hint based on last active input device
     if (this.inputManager?.isGamepad) {
