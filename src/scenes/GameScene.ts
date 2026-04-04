@@ -215,13 +215,45 @@ export class GameScene extends Phaser.Scene {
     // Update planet orbits (must run before kill zone check)
     this.updateOrbits(delta);
 
-    // Gravity on all zone objects (makes them orbit)
+    // Gravity + orbital correction on all zone objects
     for (const obj of this.zones.getObjects()) {
       if (!obj.sprite.active || !obj.sprite.body) continue;
-      const objPull = this.gravity.calculateDominantPull(obj.sprite.x, obj.sprite.y);
+      const ox = obj.sprite.x;
+      const oy = obj.sprite.y;
+
+      const dominant = this.gravity.getDominantBody(ox, oy);
+      if (!dominant) continue;
+
+      const objPull = this.gravity.calculateDominantPull(ox, oy);
       const objBody = obj.sprite.body as Phaser.Physics.Arcade.Body;
       objBody.velocity.x += objPull.x * (delta / 1000) * GRAVITY_SCALE;
       objBody.velocity.y += objPull.y * (delta / 1000) * GRAVITY_SCALE;
+
+      // Orbital velocity correction — nudges toward stable circular orbit
+      const dx = dominant.x - ox;
+      const dy = dominant.y - oy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1) continue;
+
+      const idealSpeed = Math.sqrt(
+        GRAVITY_CONSTANT * dominant.gravityMass * GRAVITY_SCALE / dist
+      );
+
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const currentRelVx = objBody.velocity.x - (dominant.velocityX ?? 0);
+      const currentRelVy = objBody.velocity.y - (dominant.velocityY ?? 0);
+      const cross = currentRelVx * ny - currentRelVy * nx;
+      const sign = cross >= 0 ? 1 : -1;
+      const tangentX = -ny * sign;
+      const tangentY = nx * sign;
+
+      const idealVx = tangentX * idealSpeed + (dominant.velocityX ?? 0);
+      const idealVy = tangentY * idealSpeed + (dominant.velocityY ?? 0);
+
+      const correction = 0.02;
+      objBody.velocity.x += (idealVx - objBody.velocity.x) * correction;
+      objBody.velocity.y += (idealVy - objBody.velocity.y) * correction;
     }
 
     // Gravity on debris
