@@ -141,6 +141,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(300);
 
+    this.audio.play("sfx_tier_up");
     this.tweens.add({
       targets: text,
       alpha: 0,
@@ -152,6 +153,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleDeath(): void {
+    this.audio.play("sfx_game_over");
     this.cameras.main.flash(500, 255, 100, 100);
     this.resources.energy = this.resources.batteryCapacity;
     this.player.body.setPosition(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
