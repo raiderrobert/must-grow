@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.superpowers/
+scripts/music/.venv/
+scripts/music/.python-version
+*.pyc
