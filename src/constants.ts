@@ -36,5 +36,25 @@ export const COLORS = {
 } as const;
 
 // Game
-export const WORLD_WIDTH = 8000;
-export const WORLD_HEIGHT = 8000;
+export const WORLD_WIDTH = 400_000;
+export const WORLD_HEIGHT = 400_000;
+
+// Convenience aliases for world center
+export const WORLD_CENTER_X = WORLD_WIDTH / 2;
+export const WORLD_CENTER_Y = WORLD_HEIGHT / 2;
+
+// Solar system distances from world center (proportionally compressed)
+export const SOLAR_DISTANCES = {
+  mercury:       12_000,
+  venus:         22_000,
+  earth:              0,
+  mars:          30_000,
+  asteroidBelt: [48_000, 72_000] as [number, number],
+  jupiter:       95_000,
+  saturn:       140_000,
+  uranus:       175_000,
+  neptune:      200_000,
+  sun:          240_000,
+} as const;
+
+export const GRAVITY_SCALE = 0.08;

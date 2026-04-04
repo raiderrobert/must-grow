@@ -2,202 +2,173 @@ import { type SpaceObjectConfig } from "@/entities/SpaceObject";
 
 export interface ZoneDefinition {
   name: string;
-  minDistance: number; // from center of world
+  minDistance: number;
   maxDistance: number;
   spawnTable: SpawnEntry[];
   maxObjects: number;
+  /** Objects smaller than this ratio relative to player size get culled */
+  cullBelowPlayerRatio: number;
+  /** Only spawn when player is within this many pixels of zone boundary */
+  activationRange: number;
 }
 
 export interface SpawnEntry {
-  weight: number; // relative spawn probability
+  weight: number;
   minTier: number;
-  factory: (x: number, y: number) => Omit<SpaceObjectConfig, "x" | "y">;
+  factory: () => Omit<SpaceObjectConfig, "x" | "y">;
 }
 
-const junkColors = [0x888888, 0x666666, 0x999999];
-const asteroidColors = [0x8b7355, 0xa0926b, 0x7a6b50];
+const junkColors = [0x888888, 0x666666, 0x999999, 0xaaaaaa];
+const asteroidColors = [0x8b7355, 0xa0926b, 0x7a6b50, 0x6b5c3e];
+const iceColors = [0xaaccee, 0x88aacc, 0xccddff];
 
 export const ZONES: ZoneDefinition[] = [
   {
     name: "Near-Earth Orbit",
     minDistance: 0,
-    maxDistance: 1000,
-    maxObjects: 25,
+    maxDistance: 8_000,
+    maxObjects: 40,
+    cullBelowPlayerRatio: 0.05,
+    activationRange: 3_000,
     spawnTable: [
       {
-        weight: 5,
-        minTier: 1,
+        weight: 5, minTier: 1,
         factory: () => ({
-          size: 6 + Math.random() * 4,
-          health: 10,
-          massYield: 2,
+          size: 20 + Math.random() * 30,
+          health: 15,
+          massYield: 3,
           energyYield: 1,
           gravityMass: 0,
           color: junkColors[Math.floor(Math.random() * junkColors.length)],
-          chewClicks: 3,
         }),
       },
       {
-        weight: 3,
-        minTier: 1,
+        weight: 3, minTier: 1,
         factory: () => ({
-          size: 10 + Math.random() * 6,
-          health: 20,
-          massYield: 5,
+          size: 40 + Math.random() * 40,
+          health: 30,
+          massYield: 8,
           energyYield: 2,
           gravityMass: 0,
-          color:
-            asteroidColors[Math.floor(Math.random() * asteroidColors.length)],
-          chewClicks: 5,
+          color: asteroidColors[Math.floor(Math.random() * asteroidColors.length)],
         }),
       },
       {
-        weight: 1,
-        minTier: 1,
+        weight: 1, minTier: 1,
         factory: () => ({
-          size: 8 + Math.random() * 4,
-          health: 15,
-          massYield: 8,
-          energyYield: 3,
+          size: 35 + Math.random() * 20,
+          health: 25,
+          massYield: 12,
+          energyYield: 4,
           gravityMass: 0,
           color: 0xaaaacc,
           name: "Satellite",
-          chewClicks: 6,
         }),
       },
     ],
   },
   {
     name: "Inner Solar System",
-    minDistance: 1000,
-    maxDistance: 2500,
-    maxObjects: 20,
+    minDistance: 8_000,
+    maxDistance: 28_000,
+    maxObjects: 30,
+    cullBelowPlayerRatio: 0.03,
+    activationRange: 5_000,
     spawnTable: [
       {
-        weight: 5,
-        minTier: 2,
+        weight: 6, minTier: 1,
         factory: () => ({
-          size: 12 + Math.random() * 10,
-          health: 30,
-          massYield: 8,
-          energyYield: 3,
-          gravityMass: 0,
-          color:
-            asteroidColors[Math.floor(Math.random() * asteroidColors.length)],
-          chewClicks: 8,
-        }),
-      },
-      {
-        weight: 2,
-        minTier: 2,
-        factory: () => ({
-          size: 20 + Math.random() * 10,
-          health: 60,
+          size: 60 + Math.random() * 80,
+          health: 50,
           massYield: 15,
           energyYield: 5,
           gravityMass: 0,
+          color: asteroidColors[Math.floor(Math.random() * asteroidColors.length)],
+        }),
+      },
+      {
+        weight: 2, minTier: 2,
+        factory: () => ({
+          size: 100 + Math.random() * 60,
+          health: 120,
+          massYield: 35,
+          energyYield: 10,
+          gravityMass: 0,
           color: 0x6699cc,
-          chewClicks: 12,
         }),
       },
     ],
   },
   {
     name: "Asteroid Belt",
-    minDistance: 2500,
-    maxDistance: 3500,
-    maxObjects: 30,
+    minDistance: 48_000,
+    maxDistance: 72_000,
+    maxObjects: 80,
+    cullBelowPlayerRatio: 0.02,
+    activationRange: 10_000,
     spawnTable: [
       {
-        weight: 8,
-        minTier: 2,
+        weight: 10, minTier: 2,
         factory: () => ({
-          size: 8 + Math.random() * 15,
-          health: 20 + Math.random() * 30,
-          massYield: 5 + Math.random() * 10,
-          energyYield: 2 + Math.random() * 3,
+          size: 80 + Math.random() * 200,
+          health: 40 + Math.random() * 80,
+          massYield: 20 + Math.random() * 40,
+          energyYield: 5 + Math.random() * 10,
           gravityMass: 0,
-          color:
-            asteroidColors[Math.floor(Math.random() * asteroidColors.length)],
-          chewClicks: 5 + Math.floor(Math.random() * 5),
+          color: asteroidColors[Math.floor(Math.random() * asteroidColors.length)],
+        }),
+      },
+      {
+        weight: 2, minTier: 2,
+        factory: () => ({
+          size: 300 + Math.random() * 200,
+          health: 200,
+          massYield: 100,
+          energyYield: 20,
+          gravityMass: 0,
+          color: 0x998877,
         }),
       },
     ],
   },
   {
     name: "Outer Solar System",
-    minDistance: 3500,
-    maxDistance: 5500,
-    maxObjects: 15,
+    minDistance: 95_000,
+    maxDistance: 200_000,
+    maxObjects: 25,
+    cullBelowPlayerRatio: 0.01,
+    activationRange: 20_000,
     spawnTable: [
       {
-        weight: 3,
-        minTier: 3,
+        weight: 5, minTier: 3,
         factory: () => ({
-          size: 15 + Math.random() * 20,
-          health: 80,
-          massYield: 30,
-          energyYield: 10,
+          size: 200 + Math.random() * 400,
+          health: 300,
+          massYield: 200,
+          energyYield: 50,
           gravityMass: 0,
           color: 0x99aacc,
-          chewClicks: 15,
         }),
       },
     ],
   },
   {
     name: "Kuiper Belt",
-    minDistance: 5500,
-    maxDistance: 7000,
-    maxObjects: 10,
+    minDistance: 200_000,
+    maxDistance: 240_000,
+    maxObjects: 20,
+    cullBelowPlayerRatio: 0.005,
+    activationRange: 30_000,
     spawnTable: [
       {
-        weight: 5,
-        minTier: 4,
+        weight: 5, minTier: 4,
         factory: () => ({
-          size: 10 + Math.random() * 12,
-          health: 50,
-          massYield: 20,
-          energyYield: 8,
+          size: 500 + Math.random() * 500,
+          health: 800,
+          massYield: 500,
+          energyYield: 100,
           gravityMass: 0,
-          color: 0xccddff,
-          chewClicks: 10,
-        }),
-      },
-      {
-        weight: 1,
-        minTier: 4,
-        factory: () => ({
-          size: 25,
-          health: 150,
-          massYield: 80,
-          energyYield: 20,
-          gravityMass: 50,
-          color: 0xddccaa,
-          name: "Pluto",
-          chewClicks: 20,
-        }),
-      },
-    ],
-  },
-  {
-    name: "Solar Core",
-    minDistance: 7000,
-    maxDistance: 8000,
-    maxObjects: 1,
-    spawnTable: [
-      {
-        weight: 1,
-        minTier: 5,
-        factory: () => ({
-          size: 200,
-          health: 10000,
-          massYield: 50000,
-          energyYield: 10000,
-          gravityMass: 50000,
-          color: 0xffdd44,
-          name: "The Sun",
-          chewClicks: 999,
+          color: iceColors[Math.floor(Math.random() * iceColors.length)],
         }),
       },
     ],

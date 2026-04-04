@@ -122,7 +122,7 @@ export class ZoneManager {
     const distToPlayer = Phaser.Math.Distance.Between(x, y, playerX, playerY);
     if (!skipDistCheck && (distToPlayer < 200 || distToPlayer > 2000)) return;
 
-    const config = selected.factory(x, y);
+    const config = selected.factory();
     const obj = new SpaceObject(this.scene, { x, y, ...config });
     this.objects.push(obj);
     this.objectGroup.add(obj.sprite);
