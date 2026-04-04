@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, ZOOM_START, ZOOM_MIN } from "@/constants";
+import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, ZOOM_START, ZOOM_MIN, PLAYER_SPAWN_X, PLAYER_SPAWN_Y } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -145,8 +145,7 @@ export class GameScene extends Phaser.Scene {
     // UpgradeScreen overlay: tell it to use uiCam (ignore from main)
     this.upgradeScreen.setMainCamera(this.cameras.main);
 
-    // Spawn player just above Earth's surface (surface ≈ WORLD_CENTER_Y + 200)
-    this.player.body.setPosition(WORLD_CENTER_X, WORLD_CENTER_Y - 500);
+    // Initial spawn position set by PlayerStation constructor via PLAYER_SPAWN_X/Y
 
     // Starting zoom: keeps player ~6px on screen, Earth arc visible at bottom
     this.cameras.main.setZoom(ZOOM_START);
@@ -268,7 +267,7 @@ export class GameScene extends Phaser.Scene {
     this.audio.play("sfx_game_over");
     this.cameras.main.flash(500, 255, 100, 100);
     this.resources.energy = this.resources.batteryCapacity;
-    this.player.body.setPosition(WORLD_CENTER_X, WORLD_CENTER_Y - 8_000);
+    this.player.body.setPosition(PLAYER_SPAWN_X, PLAYER_SPAWN_Y);
     this.player.body.setVelocity(0, 0);
   }
 

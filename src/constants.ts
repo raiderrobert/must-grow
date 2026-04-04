@@ -6,7 +6,7 @@ export const EARTH_GRAVITY_PULL = 30; // constant downward pull in Tier 1 (pixel
 // Player
 export const PLAYER_START_X = 400;
 export const PLAYER_START_Y = 300;
-export const PLAYER_BASE_SPEED = 600;
+export const PLAYER_BASE_SPEED = 100;
 export const PLAYER_BASE_THRUST = 50; // base upward thrust against gravity
 export const PLAYER_START_SIZE = 8;
 
@@ -45,20 +45,24 @@ export const WORLD_CENTER_Y = WORLD_HEIGHT / 2;
 
 // Solar system distances from world center (proportionally compressed)
 export const SOLAR_DISTANCES = {
-  mercury:       12_000,
-  venus:         22_000,
-  earth:              0,
-  mars:          30_000,
+  mercury: 12_000,
+  venus: 22_000,
+  earth: 0,
+  mars: 30_000,
   asteroidBelt: [48_000, 72_000] as [number, number],
-  jupiter:       95_000,
-  saturn:       140_000,
-  uranus:       175_000,
-  neptune:      200_000,
-  sun:          240_000,
+  jupiter: 95_000,
+  saturn: 140_000,
+  uranus: 175_000,
+  neptune: 200_000,
+  sun: 240_000,
 } as const;
 
 export const GRAVITY_SCALE = 0.08;
 
+// Player spawn position — used at game start and on respawn
+export const PLAYER_SPAWN_X = WORLD_CENTER_X;
+export const PLAYER_SPAWN_Y = WORLD_CENTER_Y - 8_000;
+
 // Camera
-export const ZOOM_START = 0.75;   // zoom at game start
-export const ZOOM_MIN = 0.02;     // furthest the camera ever zooms out
+export const ZOOM_START = 1.5; // zoom at game start
+export const ZOOM_MIN = 0.02; // furthest the camera ever zooms out

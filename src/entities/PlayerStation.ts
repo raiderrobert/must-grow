@@ -2,9 +2,9 @@ import Phaser from "phaser";
 import {
   PLAYER_BASE_SPEED,
   PLAYER_START_SIZE,
+  PLAYER_SPAWN_X,
+  PLAYER_SPAWN_Y,
   COLORS,
-  WORLD_WIDTH,
-  WORLD_HEIGHT,
 } from "@/constants";
 import type { InputManager } from "@/systems/InputManager";
 
@@ -34,11 +34,7 @@ export class PlayerStation {
     g.generateTexture(textureKey, 64, 64);
     g.destroy();
 
-    this.body = scene.physics.add.sprite(
-      WORLD_WIDTH / 2,
-      WORLD_HEIGHT / 2,
-      textureKey
-    );
+    this.body = scene.physics.add.sprite(PLAYER_SPAWN_X, PLAYER_SPAWN_Y, textureKey);
     this.body.setCollideWorldBounds(true);
     this.body.setDamping(true);
     this.body.setDrag(0.99);
