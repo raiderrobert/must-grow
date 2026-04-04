@@ -1,4 +1,4 @@
-import { GRAVITY_CONSTANT } from "@/constants";
+import { GRAVITY_CONSTANT, SOI_MULTIPLIER } from "@/constants";
 import Phaser from "phaser";
 
 export interface GravityBody {
@@ -131,6 +131,44 @@ export class GravitySystem {
    * to the nearest body that has an explicit killRadius.
    * Warning band starts at killRadius * warningBandMult outside the kill surface.
    */
+  /**
+   * Find the body whose sphere of influence contains this position,
+   * and return only that body's gravitational pull.
+   * SOI = killRadius * SOI_MULTIPLIER. Smallest SOI wins if overlapping.
+   * Falls back to the most massive body (Sun) when outside all SOIs.
+   */
+  calculateDominantPull(px: number, py: number): GravityPull {
+    const body = this.getDominantBody(px, py);
+    if (!body) return { x: 0, y: 0, magnitude: 0 };
+    return this.calculatePull(body, px, py);
+  }
+
+  /** Returns the dominant gravity body for a position. */
+  getDominantBody(px: number, py: number): GravityBody | null {
+    let dominantBody: GravityBody | null = null;
+    let smallestSOI = Infinity;
+    let fallbackBody: GravityBody | null = null;
+    let fallbackMass = 0;
+
+    for (const body of this.bodies) {
+      if (body.killRadius !== undefined && body.killRadius > 0) {
+        const soi = body.killRadius * SOI_MULTIPLIER;
+        const dx = body.x - px;
+        const dy = body.y - py;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < soi && soi < smallestSOI) {
+          dominantBody = body;
+          smallestSOI = soi;
+        }
+      }
+      if (body.gravityMass > fallbackMass) {
+        fallbackMass = body.gravityMass;
+        fallbackBody = body;
+      }
+    }
+    return dominantBody ?? fallbackBody;
+  }
+
   getApproachFactor(
     playerX: number,
     playerY: number,

@@ -5,7 +5,7 @@ export const EARTH_GRAVITY_PULL = 30; // constant downward pull in Tier 1 (pixel
 // Player
 export const PLAYER_START_X = 400;
 export const PLAYER_START_Y = 300;
-export const PLAYER_THRUST_POWER = 200;
+export const PLAYER_THRUST_POWER = 80;
 export const PLAYER_BASE_THRUST = 50; // base upward thrust against gravity
 export const PLAYER_START_SIZE = 8;
 
@@ -57,6 +57,7 @@ export const SOLAR_DISTANCES = {
 } as const;
 
 export const GRAVITY_SCALE = 0.5; // increased for stickier orbits
+export const SOI_MULTIPLIER = 5;  // sphere of influence = killRadius * this
 
 // Orbital physics
 export const ORBIT_SPEED_SCALE = 1.0; // global multiplier for planet orbit speeds
