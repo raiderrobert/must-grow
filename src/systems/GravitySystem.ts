@@ -93,6 +93,26 @@ export class GravitySystem {
     this.graphics.setDepth(-5);
   }
 
+  /** Returns true if the player should die from gravity (too close to a deadly body). */
+  isInLethalZone(
+    playerX: number,
+    playerY: number,
+    playerThrust: number
+  ): boolean {
+    for (const body of this.bodies) {
+      if (this.getDangerLevel(body, playerX, playerY, playerThrust) === "deadly") {
+        const dx = body.x - playerX;
+        const dy = body.y - playerY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const killRadius = Math.sqrt(body.gravityMass) * 2;
+        if (dist < killRadius) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   renderDangerZones(
     playerX: number,
     playerY: number,

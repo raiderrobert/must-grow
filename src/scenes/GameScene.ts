@@ -78,7 +78,12 @@ export class GameScene extends Phaser.Scene {
     const pull = this.gravity.calculateTotalPull(this.player.x, this.player.y);
     this.player.applyGravity(pull.x, pull.y);
 
-    // 2. Player movement
+    // 2. Gravity death check
+    if (this.gravity.isInLethalZone(this.player.x, this.player.y, this.player.thrustPower)) {
+      this.handleDeath();
+    }
+
+    // 3. Player movement
     this.player.update(delta);
 
     // 3. Combat (manual + auto)
