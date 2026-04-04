@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { ZONES, type ZoneDefinition } from "@/data/zones";
 import { SpaceObject } from "@/entities/SpaceObject";
 import { WORLD_WIDTH, WORLD_HEIGHT, GRAVITY_CONSTANT, GRAVITY_SCALE } from "@/constants";
-import type { GravitySystem } from "@/systems/GravitySystem";
+import type { GravitySystem, GravityBody } from "@/systems/GravitySystem";
 
 const CENTER_X = WORLD_WIDTH / 2;
 const CENTER_Y = WORLD_HEIGHT / 2;
@@ -100,7 +100,7 @@ export class ZoneManager {
    */
   private computeOrbitalVelocity(x: number, y: number): { vx: number; vy: number } {
     if (!this.gravity) return { vx: 0, vy: 0 };
-    let nearestBody: { x: number; y: number; gravityMass: number } | null = null;
+    let nearestBody: GravityBody | null = null;
     let nearestDist = Infinity;
     for (const body of this.gravity.getBodies()) {
       if (body.killRadius === undefined) continue;
@@ -118,7 +118,15 @@ export class ZoneManager {
     const ny = dy / nearestDist;
     const sign = Math.random() < 0.5 ? 1 : -1;
     const perturb = 0.9 + Math.random() * 0.2;
-    return { vx: -ny * sign * orbitalSpeed * perturb, vy: nx * sign * orbitalSpeed * perturb };
+
+    // Add the body's own velocity so spawned objects move with it
+    const bodyVx = nearestBody.velocityX ?? 0;
+    const bodyVy = nearestBody.velocityY ?? 0;
+
+    return {
+      vx: bodyVx + (-ny * sign * orbitalSpeed * perturb),
+      vy: bodyVy + (nx * sign * orbitalSpeed * perturb),
+    };
   }
 
   private isInsideBodyZone(x: number, y: number): boolean {

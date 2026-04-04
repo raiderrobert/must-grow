@@ -561,6 +561,12 @@ export class GameScene extends Phaser.Scene {
       tracked.gravityBody.x = result.x;
       tracked.gravityBody.y = result.y;
 
+      // Store velocity so ZoneManager and other systems can inherit it
+      const linearSpeed = orbit.orbitSpeed * orbit.distance * ORBIT_SPEED_SCALE;
+      const perpAngle = orbit.currentAngle + Math.PI / 2;
+      tracked.gravityBody.velocityX = Math.cos(perpAngle) * linearSpeed;
+      tracked.gravityBody.velocityY = Math.sin(perpAngle) * linearSpeed;
+
       const origX = tracked.rendered.graphics.getData("origX") as number;
       const origY = tracked.rendered.graphics.getData("origY") as number;
       if (origX !== undefined && origY !== undefined) {

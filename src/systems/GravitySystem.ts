@@ -5,8 +5,10 @@ export interface GravityBody {
   x: number;
   y: number;
   gravityMass: number;
-  killRadius?: number; // explicit surface radius; overrides the calculated default
-  name?: string;      // for identification (e.g., "Earth", "Sun")
+  killRadius?: number;   // explicit surface radius; overrides the calculated default
+  name?: string;        // for identification (e.g., "Earth", "Sun")
+  velocityX?: number;   // current velocity — updated each frame by orbit system
+  velocityY?: number;
 }
 
 export interface GravityPull {
