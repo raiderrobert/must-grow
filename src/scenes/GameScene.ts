@@ -10,6 +10,8 @@ import { getTierForMass, getTierName } from "@/data/tiers";
 import { CombatSystem } from "@/systems/CombatSystem";
 import { HUD } from "@/ui/HUD";
 import { UpgradeShop } from "@/ui/UpgradeShop";
+import { AudioManager } from "@/systems/AudioManager";
+import type { SpaceObject } from "@/entities/SpaceObject";
 
 export class GameScene extends Phaser.Scene {
   player!: PlayerStation;
@@ -20,6 +22,7 @@ export class GameScene extends Phaser.Scene {
   combat!: CombatSystem;
   hud!: HUD;
   shop!: UpgradeShop;
+  audio!: AudioManager;
   currentTier: number = 1;
 
   constructor() {
@@ -51,8 +54,11 @@ export class GameScene extends Phaser.Scene {
     this.combat = new CombatSystem(this, this.player, this.resources, this.zones);
     this.combat.setUpgrades(this.upgrades);
 
-    this.hud = new HUD(this, this.resources);
+    this.audio = new AudioManager(this);
+    this.hud = new HUD(this, this.resources, this.audio);
     this.shop = new UpgradeShop(this, this.upgrades, this.resources);
+
+    this.combat.setAudio(this.audio);
 
     // Collision: player vs space objects
     this.physics.add.overlap(
@@ -161,7 +167,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   // Exposed for collision handler (wired later)
-  onCollision(obj: import("@/entities/SpaceObject").SpaceObject): void {
+  onCollision(obj: SpaceObject): void {
     const sizeRatio = obj.config.size / this.player.size;
 
     if (sizeRatio < 0.3) {

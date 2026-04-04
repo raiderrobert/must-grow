@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Must Grow — Audio Preview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #ccc;
+      font-family: 'Courier New', monospace;
+      padding: 2rem;
+    }
+    h1 { color: #fff; font-size: 1.8rem; margin-bottom: 0.3rem; }
+    .tagline { color: #6c63ff; font-style: italic; margin-bottom: 2rem; }
+    h2 {
+      color: #ffd93d;
+      font-size: 1.1rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #333;
+      padding-bottom: 0.5rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 1rem;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: #6c63ff; }
+    .card h3 { color: #fff; font-size: 0.95rem; margin-bottom: 0.3rem; }
+    .card p { color: #888; font-size: 0.8rem; margin-bottom: 0.8rem; }
+    .card audio { width: 100%; height: 36px; }
+    .midi-note {
+      background: #1a1a2e;
+      border: 1px solid #ffd93d;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      color: #aaa;
+      font-size: 0.85rem;
+    }
+    .midi-note code { color: #4ecdc4; }
+  </style>
+</head>
+<body>
+  <h1>Must Grow</h1>
+  <p class="tagline">"The station must grow."</p>
+
+  <h2>MIDI Tracks</h2>
+  <div class="midi-note">
+    MIDI files can't play directly in the browser. Use <code>open main_theme.mid</code> in terminal,
+    or drag them into a DAW (GarageBand, etc). We'll convert these to Web Audio during implementation.
+    <div style="margin-top: 0.8rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <a href="main_theme.mid" download style="color:#6c63ff; text-decoration:none; border:1px solid #6c63ff; padding:0.4rem 0.8rem; border-radius:4px; font-size:0.8rem;">⬇ Main Theme (130 BPM)</a>
+      <a href="boss_theme.mid" download style="color:#ff6b6b; text-decoration:none; border:1px solid #ff6b6b; padding:0.4rem 0.8rem; border-radius:4px; font-size:0.8rem;">⬇ Boss Theme (160 BPM)</a>
+      <a href="ambient_space.mid" download style="color:#4ecdc4; text-decoration:none; border:1px solid #4ecdc4; padding:0.4rem 0.8rem; border-radius:4px; font-size:0.8rem;">⬇ Ambient Space (80 BPM)</a>
+    </div>
+  </div>
+
+  <h2>Sound Effects</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Zap</h3>
+      <p>Laser fire — descending square wave sweep</p>
+      <audio controls src="sfx_zap.wav"></audio>
+    </div>
+    <div class="card">
+      <h3>Explosion</h3>
+      <p>Noise burst with low rumble</p>
+      <audio controls src="sfx_explosion.wav"></audio>
+    </div>
+    <div class="card">
+      <h3>Pickup</h3>
+      <p>Ascending C-E-G arpeggio — resource collected</p>
+      <audio controls src="sfx_pickup.wav"></audio>
+    </div>
+    <div class="card">
+      <h3>Power Up</h3>
+      <p>Ascending sweep — energy generated</p>
+      <audio controls src="sfx_power_up.wav"></audio>
+    </div>
+    <div class="card">
+      <h3>Power Down</h3>
+      <p>Descending sad tone — system shutting down</p>
+      <audio controls src="sfx_power_down.wav"></audio>
+    </div>
+    <div class="card">
+      <h3>Upgrade</h3>
+      <p>Ascending sweep into major chord — triumphant</p>
+      <audio controls src="sfx_upgrade.wav"></audio>
+    </div>
+    <div class="card">
+      <h3>Game Over</h3>
+      <p>Descending minor arpeggio — somber</p>
+      <audio controls src="sfx_game_over.wav"></audio>
+    </div>
+    <div class="card">
+      <h3>Tier Up</h3>
+      <p>Epic ascending fanfare into sustained chord</p>
+      <audio controls src="sfx_tier_up.wav"></audio>
+    </div>
+  </div>
+</body>
+</html>
