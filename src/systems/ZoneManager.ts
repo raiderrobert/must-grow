@@ -1,0 +1,120 @@
+import Phaser from "phaser";
+import { ZONES, type ZoneDefinition } from "@/data/zones";
+import { SpaceObject } from "@/entities/SpaceObject";
+import { WORLD_WIDTH, WORLD_HEIGHT } from "@/constants";
+
+const CENTER_X = WORLD_WIDTH / 2;
+const CENTER_Y = WORLD_HEIGHT / 2;
+
+export class ZoneManager {
+  private scene: Phaser.Scene;
+  private objects: SpaceObject[] = [];
+  private spawnTimer: number = 0;
+  private spawnInterval: number = 2000; // ms between spawn checks
+
+  objectGroup!: Phaser.Physics.Arcade.Group;
+
+  constructor(scene: Phaser.Scene) {
+    this.scene = scene;
+    this.objectGroup = scene.physics.add.group();
+  }
+
+  update(
+    delta: number,
+    playerX: number,
+    playerY: number,
+    playerTier: number,
+    playerMass: number = 0
+  ): void {
+    this.spawnTimer += delta;
+
+    // Heal gravity bodies each frame
+    for (const obj of this.objects) {
+      if (obj.sprite.active) {
+        obj.updateHealing(delta, playerMass);
+      }
+    }
+
+    if (this.spawnTimer < this.spawnInterval) return;
+    this.spawnTimer = 0;
+
+    // Clean up destroyed objects
+    this.objects = this.objects.filter((obj) => obj.sprite.active);
+
+    const playerDist = Phaser.Math.Distance.Between(
+      playerX,
+      playerY,
+      CENTER_X,
+      CENTER_Y
+    );
+
+    for (const zone of ZONES) {
+      const objectsInZone = this.objects.filter((obj) => {
+        const d = Phaser.Math.Distance.Between(
+          obj.sprite.x,
+          obj.sprite.y,
+          CENTER_X,
+          CENTER_Y
+        );
+        return d >= zone.minDistance && d < zone.maxDistance;
+      });
+
+      if (objectsInZone.length >= zone.maxObjects) continue;
+
+      if (
+        playerDist < zone.minDistance - 1500 ||
+        playerDist > zone.maxDistance + 1500
+      )
+        continue;
+
+      this.spawnInZone(zone, playerTier, playerX, playerY);
+    }
+  }
+
+  private spawnInZone(
+    zone: ZoneDefinition,
+    playerTier: number,
+    playerX: number,
+    playerY: number
+  ): void {
+    const eligible = zone.spawnTable.filter((e) => playerTier >= e.minTier);
+    if (eligible.length === 0) return;
+
+    // Weighted random selection
+    const totalWeight = eligible.reduce((sum, e) => sum + e.weight, 0);
+    let roll = Math.random() * totalWeight;
+    let selected = eligible[0];
+    for (const entry of eligible) {
+      roll -= entry.weight;
+      if (roll <= 0) {
+        selected = entry;
+        break;
+      }
+    }
+
+    const angle = Math.random() * Math.PI * 2;
+    const dist =
+      zone.minDistance + Math.random() * (zone.maxDistance - zone.minDistance);
+    const x = CENTER_X + Math.cos(angle) * dist;
+    const y = CENTER_Y + Math.sin(angle) * dist;
+
+    // Don't spawn too close to or too far from player
+    const distToPlayer = Phaser.Math.Distance.Between(x, y, playerX, playerY);
+    if (distToPlayer < 200 || distToPlayer > 1200) return;
+
+    const config = selected.factory(x, y);
+    const obj = new SpaceObject(this.scene, { x, y, ...config });
+    this.objects.push(obj);
+    this.objectGroup.add(obj.sprite);
+  }
+
+  getObjects(): SpaceObject[] {
+    return this.objects.filter((o) => o.sprite.active);
+  }
+
+  removeObject(obj: SpaceObject): void {
+    const idx = this.objects.indexOf(obj);
+    if (idx !== -1) this.objects.splice(idx, 1);
+    obj.destroy();
+  }
+}
