@@ -268,7 +268,7 @@ export class GameScene extends Phaser.Scene {
     this.audio.play("sfx_game_over");
     this.cameras.main.flash(500, 255, 100, 100);
     this.resources.energy = this.resources.batteryCapacity;
-    this.player.body.setPosition(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+    this.player.body.setPosition(WORLD_CENTER_X, WORLD_CENTER_Y - 8_000);
     this.player.body.setVelocity(0, 0);
   }
 
