@@ -9,6 +9,9 @@ const config: Phaser.Types.Core.GameConfig = {
   width: window.innerWidth * dpr,
   height: window.innerHeight * dpr,
   backgroundColor: "#0a0a1a",
+  input: {
+    gamepad: true,
+  },
   physics: {
     default: "arcade",
     arcade: {
