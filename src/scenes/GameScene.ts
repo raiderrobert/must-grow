@@ -57,8 +57,8 @@ export class GameScene extends Phaser.Scene {
 
     this.zones.populate(this.player.x, this.player.y, 1);
 
-    // Earth gravity body — matches renderEarth() visual position
-    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y + 3_200, gravityMass: 500 });
+    // Earth gravity body — killRadius matches the visual ocean surface
+    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y + 3_200, gravityMass: 500, killRadius: 3_000 });
     // Sun far north
     this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y - 240_000, gravityMass: 50_000 });
 
@@ -315,6 +315,10 @@ export class GameScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 0.08);
     g.fillCircle(earthX, earthY, radius);
     g.lineStyle(30, 0x4488cc, 0.3);
+    g.strokeCircle(earthX, earthY, radius);
+
+    // Death boundary — bright ring exactly at the kill surface so the player can see it
+    g.lineStyle(40, 0x88ccff, 0.6);
     g.strokeCircle(earthX, earthY, radius);
 
     const label = this.add.text(earthX, earthY + radius + 400, "Earth", {

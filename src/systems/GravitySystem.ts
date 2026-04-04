@@ -5,6 +5,7 @@ export interface GravityBody {
   x: number;
   y: number;
   gravityMass: number;
+  killRadius?: number; // explicit surface radius; overrides the calculated default
 }
 
 export interface GravityPull {
@@ -108,7 +109,7 @@ export class GravitySystem {
         const dx = body.x - playerX;
         const dy = body.y - playerY;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const killRadius = Math.sqrt(body.gravityMass) * 2;
+        const killRadius = body.killRadius ?? Math.sqrt(body.gravityMass) * 2;
         if (dist < killRadius) {
           return true;
         }
