@@ -55,12 +55,14 @@ export class GameScene extends Phaser.Scene {
 
     this.zones.populate(this.player.x, this.player.y, 1);
 
-    // Gravity bodies
-    this.gravity.addBody({ x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2 + 600, gravityMass: 500 });
-    this.gravity.addBody({ x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2 - 3500, gravityMass: 50000 });
+    // Earth at world center
+    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y, gravityMass: 500 });
+    // Sun far north
+    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y - 240_000, gravityMass: 50_000 });
 
     this.gravity.initGraphics(this);
     this.renderEarth();
+    this.renderSun();
 
     // Place named planets as fixed world objects
     for (const def of PLANET_DEFS) {
@@ -277,29 +279,57 @@ export class GameScene extends Phaser.Scene {
   }
 
   private renderEarth(): void {
-    const earthX = WORLD_WIDTH / 2;
-    const earthY = WORLD_HEIGHT / 2 + 600;
-    const radius = 180;
+    const earthX = WORLD_CENTER_X;
+    const earthY = WORLD_CENTER_Y + 3_200;
+    const radius = 3_000;
     const g = this.add.graphics().setDepth(-3);
     this.earthObjects.push(g);
 
-    g.fillStyle(0x1a3a5c, 0.3);
-    g.fillCircle(earthX, earthY, radius + 30);
-    g.fillStyle(0x1a4a8a, 0.9);
+    g.fillStyle(0x1a3a5c, 0.15);
+    g.fillCircle(earthX, earthY, radius + 600);
+    g.fillStyle(0x2255aa, 0.25);
+    g.fillCircle(earthX, earthY, radius + 200);
+    g.fillStyle(0x1a4a8a, 0.95);
     g.fillCircle(earthX, earthY, radius);
     g.fillStyle(0x2d6e2d, 0.85);
-    g.fillEllipse(earthX - 40, earthY - 30, 90, 70);
-    g.fillEllipse(earthX + 50, earthY + 20, 70, 80);
-    g.fillEllipse(earthX - 20, earthY + 50, 60, 40);
-    g.fillStyle(0xffffff, 0.15);
+    g.fillEllipse(earthX - 500, earthY - 400, 1200, 900);
+    g.fillEllipse(earthX + 700, earthY + 300, 900, 1100);
+    g.fillEllipse(earthX - 200, earthY + 700, 800, 500);
+    g.fillEllipse(earthX + 300, earthY - 800, 600, 400);
+    g.fillStyle(0xffffff, 0.08);
     g.fillCircle(earthX, earthY, radius);
-    g.lineStyle(2, 0x4488cc, 0.4);
+    g.lineStyle(30, 0x4488cc, 0.3);
     g.strokeCircle(earthX, earthY, radius);
 
-    const label = this.add.text(earthX, earthY + radius + 20, "Earth", {
-      fontFamily: "monospace", fontSize: "14px", color: "#4488cc",
+    const label = this.add.text(earthX, earthY + radius + 400, "Earth", {
+      fontFamily: "monospace", fontSize: "300px", color: "#4488cc",
     }).setOrigin(0.5).setDepth(-3).setAlpha(0.6);
     this.earthObjects.push(label);
+  }
+
+  private renderSun(): void {
+    const sunX = WORLD_CENTER_X;
+    const sunY = WORLD_CENTER_Y - 240_000;
+    const radius = 25_000;
+    const g = this.add.graphics().setDepth(-4);
+    this.earthObjects.push(g); // tracked for uiCam ignore
+
+    // Corona layers
+    for (let i = 0; i < 4; i++) {
+      g.fillStyle(0xffaa00, 0.04 - i * 0.008);
+      g.fillCircle(sunX, sunY, radius * (1.4 + i * 0.3));
+    }
+    // Body
+    g.fillStyle(0xffdd00, 1.0);
+    g.fillCircle(sunX, sunY, radius);
+    // Bright core
+    g.fillStyle(0xffffff, 0.4);
+    g.fillCircle(sunX, sunY, radius * 0.5);
+
+    const sunLabel = this.add.text(sunX, sunY + radius + 2_000, "The Sun", {
+      fontFamily: "monospace", fontSize: "2000px", color: "#ffdd00",
+    }).setOrigin(0.5).setDepth(-4).setAlpha(0.8);
+    this.earthObjects.push(sunLabel);
   }
 
   private updateGravityIndicator(): void {
