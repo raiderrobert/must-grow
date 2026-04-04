@@ -59,6 +59,9 @@ export const SOLAR_DISTANCES = {
 
 export const GRAVITY_SCALE = 0.08;
 
+// Debug
+export const DEBUG_KILL_ZONES = false; // draws thin red ring at kill zone boundaries
+
 // Player spawn position — used at game start and on respawn
 // 1500px above world center = 4700px from Earth's center, safely above the 3500px kill zone
 // and inside the Near-Earth Orbit zone (0-8000px) where debris spawns

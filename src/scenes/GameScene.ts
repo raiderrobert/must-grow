@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, ZOOM_START, ZOOM_MIN, PLAYER_SPAWN_X, PLAYER_SPAWN_Y } from "@/constants";
+import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, ZOOM_START, ZOOM_MIN, PLAYER_SPAWN_X, PLAYER_SPAWN_Y, DEBUG_KILL_ZONES } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -58,7 +58,7 @@ export class GameScene extends Phaser.Scene {
     this.zones.populate(this.player.x, this.player.y, 1);
 
     // Earth gravity body — killRadius at outer atmosphere where player naturally drifts in
-    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y + 3_200, gravityMass: 500, killRadius: 3_100 });
+    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y + 3_200, gravityMass: 500, killRadius: 3_000 });
     // Sun far north
     this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y - 240_000, gravityMass: 50_000 });
 
@@ -316,14 +316,13 @@ export class GameScene extends Phaser.Scene {
     g.lineStyle(30, 0x4488cc, 0.3);
     g.strokeCircle(earthX, earthY, radius);
 
-    // Death boundary ring — separate graphics at high depth, bright red, at killRadius
-    // killRadius = 3500 (outer atmosphere, 200px above the inner layer)
-    const deathRing = this.add.graphics().setDepth(5);
-    this.earthObjects.push(deathRing);
-    deathRing.lineStyle(120, 0xff3300, 0.55);
-    deathRing.strokeCircle(earthX, earthY, 3_100);
-    deathRing.lineStyle(40, 0xff8800, 0.8);
-    deathRing.strokeCircle(earthX, earthY, 3_100);
+    // Debug: thin red ring at exact kill boundary (toggle DEBUG_KILL_ZONES in constants.ts)
+    if (DEBUG_KILL_ZONES) {
+      const deathRing = this.add.graphics().setDepth(10);
+      this.earthObjects.push(deathRing);
+      deathRing.lineStyle(8, 0xff0000, 1.0);
+      deathRing.strokeCircle(earthX, earthY, 3_000);
+    }
 
     const label = this.add.text(earthX, earthY + radius + 400, "Earth", {
       fontFamily: "monospace", fontSize: "48px", color: "#4488cc",
