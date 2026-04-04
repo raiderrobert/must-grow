@@ -58,8 +58,12 @@ export class GameScene extends Phaser.Scene {
     this.audio = new AudioManager(this);
     this.hud = new HUD(this, this.resources, this.audio);
     this.shop = new UpgradeShop(this, this.upgrades, this.resources);
+    this.shop.setDependencies(this.player, this.combat, this.audio);
 
     this.combat.setAudio(this.audio);
+
+    // Apply initial stats (level 0 defaults)
+    this.upgrades.applyEffects(this.player, this.combat, this.resources);
 
     // Collision: player vs space objects
     this.physics.add.overlap(
@@ -90,9 +94,6 @@ export class GameScene extends Phaser.Scene {
 
     // 3. Combat (manual + auto)
     this.combat.update(delta);
-
-    // 4. Upgrade effects
-    this.upgrades.applyEffects(this.player, this.combat, this.resources);
 
     // Zone spawning
     const tier = getTierForMass(this.resources.totalMassEarned);

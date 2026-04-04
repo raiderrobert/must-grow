@@ -2,6 +2,9 @@ import Phaser from "phaser";
 import { COLORS } from "@/constants";
 import { UpgradeManager } from "@/systems/UpgradeManager";
 import { ResourceManager } from "@/systems/ResourceManager";
+import type { PlayerStation } from "@/entities/PlayerStation";
+import type { CombatSystem } from "@/systems/CombatSystem";
+import type { AudioManager } from "@/systems/AudioManager";
 import { getTierForMass } from "@/data/tiers";
 import type { UpgradeDefinition, UpgradeCategory } from "@/data/upgrades";
 
@@ -19,6 +22,9 @@ export class UpgradeShop {
   private scene: Phaser.Scene;
   private upgrades: UpgradeManager;
   private resources: ResourceManager;
+  private player: PlayerStation | null = null;
+  private combat: CombatSystem | null = null;
+  private audio: AudioManager | null = null;
   private container: Phaser.GameObjects.Container;
   private isOpen: boolean = false;
   private rows: Phaser.GameObjects.Container[] = [];
@@ -55,6 +61,16 @@ export class UpgradeShop {
         this.container.setVisible(this.isOpen);
         if (this.isOpen) this.rebuild();
       });
+  }
+
+  setDependencies(
+    player: PlayerStation,
+    combat: CombatSystem,
+    audio: AudioManager
+  ): void {
+    this.player = player;
+    this.combat = combat;
+    this.audio = audio;
   }
 
   rebuild(): void {
@@ -156,8 +172,13 @@ export class UpgradeShop {
     if (canBuy) {
       buyBtn.setInteractive({ useHandCursor: true });
       buyBtn.on("pointerdown", () => {
-        this.upgrades.purchase(def.id, tier);
-        this.rebuild();
+        if (this.upgrades.purchase(def.id, tier)) {
+          this.audio?.play("sfx_upgrade");
+          if (this.player && this.combat) {
+            this.upgrades.applyEffects(this.player, this.combat, this.resources);
+          }
+          this.rebuild();
+        }
       });
     }
 
