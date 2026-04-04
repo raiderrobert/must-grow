@@ -153,7 +153,7 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     // 1. Gravity pull
     const pull = this.gravity.calculateTotalPull(this.player.x, this.player.y);
-    this.player.applyGravity(pull.x, pull.y);
+    this.player.applyGravity(pull.x * (delta / 1000), pull.y * (delta / 1000));
 
     // 2. Gravity death check
     if (this.gravity.isInLethalZone(this.player.x, this.player.y, this.player.thrustPower)) {
