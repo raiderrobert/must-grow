@@ -359,10 +359,12 @@ export class GameScene extends Phaser.Scene {
   private spawnNearEarth(): void {
     const earthBody = this.trackedBodies.find(tb => tb.name === "Earth");
     if (earthBody) {
+      const killR = earthBody.gravityBody.killRadius ?? 3_000;
+      const orbitAltitude = 1_500;            // px above Earth's surface
+      const spawnDist = killR + orbitAltitude; // distance from Earth's center
       const spawnX = earthBody.gravityBody.x;
-      const spawnY = earthBody.gravityBody.y - 1_500;
+      const spawnY = earthBody.gravityBody.y - spawnDist;
       this.player.body.setPosition(spawnX, spawnY);
-      const spawnDist = 1_500 + (earthBody.gravityBody.killRadius ?? 3_000);
       const orbitalSpeed = Math.sqrt(
         GRAVITY_CONSTANT * earthBody.gravityBody.gravityMass * GRAVITY_SCALE / spawnDist
       );
