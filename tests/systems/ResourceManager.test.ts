@@ -95,6 +95,35 @@ describe("ResourceManager", () => {
     });
   });
 
+  describe("cascading shutdown", () => {
+    it("all systems online at full energy", () => {
+      expect(rm.isSystemOnline("drones")).toBe(true);
+      expect(rm.isSystemOnline("engines")).toBe(true);
+    });
+
+    it("drones go offline first at 18% energy", () => {
+      rm.drainEnergy(rm.energy);
+      rm.addEnergy(rm.batteryCapacity * 0.18); // 18%
+      expect(rm.isSystemOnline("drones")).toBe(false);
+      expect(rm.isSystemOnline("autoTurrets")).toBe(true);
+    });
+
+    it("all systems offline at 0 energy", () => {
+      rm.drainEnergy(rm.energy);
+      expect(rm.isSystemOnline("drones")).toBe(false);
+      expect(rm.isSystemOnline("engines")).toBe(false);
+      expect(rm.activeShutdowns).toHaveLength(5);
+    });
+
+    it("systems come back in reverse order as energy restores", () => {
+      rm.drainEnergy(rm.energy); // all offline
+      rm.addEnergy(rm.batteryCapacity * 0.06); // 6% — engines + shields back
+      expect(rm.isSystemOnline("engines")).toBe(true);
+      expect(rm.isSystemOnline("shields")).toBe(true);
+      expect(rm.isSystemOnline("autoTurrets")).toBe(false);
+    });
+  });
+
   describe("energy generation and drain rates", () => {
     it("net generation rate accounts for generation and drain", () => {
       rm.generationRate = 10;

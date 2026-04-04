@@ -252,7 +252,7 @@ export class CombatSystem {
   }
 
   private updateAutoTurrets(delta: number, turretCount: number): void {
-    if (turretCount === 0 || this.resources.isPowerDead) return;
+    if (turretCount === 0 || !this.resources.isSystemOnline("autoTurrets")) return;
 
     this.autoFireTimer += delta;
     if (this.autoFireTimer < this.autoFireInterval / turretCount) return;
@@ -281,7 +281,7 @@ export class CombatSystem {
   }
 
   updateTractorBeam(delta: number, tractorLevel: number): void {
-    if (tractorLevel === 0 || this.resources.isPowerDead) return;
+    if (tractorLevel === 0 || !this.resources.isSystemOnline("tractorBeam")) return;
     void delta;
 
     const range = 150 + tractorLevel * 50;
@@ -312,7 +312,7 @@ export class CombatSystem {
   }
 
   updateGravityWell(delta: number, gravityWellLevel: number): void {
-    if (gravityWellLevel === 0 || this.resources.isPowerDead) return;
+    if (gravityWellLevel === 0 || !this.resources.isSystemOnline("drones")) return;
 
     const range = 300 + gravityWellLevel * 100;
     const objects = this.zones.getObjects();

@@ -70,4 +70,33 @@ export class ResourceManager {
   get isPowerDead(): boolean {
     return this.energy <= 0;
   }
+
+  /** Systems ordered by shutdown priority (first to go offline). */
+  static readonly SHUTDOWN_ORDER = [
+    "drones",
+    "tractorBeam",
+    "autoTurrets",
+    "shields",
+    "engines",
+  ] as const;
+
+  /** Energy ratio thresholds where each system shuts down. */
+  private static readonly SHUTDOWN_THRESHOLDS: Record<string, number> = {
+    drones: 0.20,
+    tractorBeam: 0.15,
+    autoTurrets: 0.10,
+    shields: 0.05,
+    engines: 0.0,
+  };
+
+  isSystemOnline(system: string): boolean {
+    const threshold = ResourceManager.SHUTDOWN_THRESHOLDS[system] ?? 0;
+    return this.energyRatio > threshold;
+  }
+
+  get activeShutdowns(): readonly string[] {
+    return ResourceManager.SHUTDOWN_ORDER.filter(
+      (s) => !this.isSystemOnline(s)
+    );
+  }
 }
