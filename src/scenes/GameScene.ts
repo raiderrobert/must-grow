@@ -120,7 +120,21 @@ export class GameScene extends Phaser.Scene {
     this.player.isLocked = this.combat.clampedTarget !== null;
     this.player.update(delta);
 
-    // 3. Combat (manual + auto)
+    // Attack button — clamp/chew (Tier 1) or fire beam (Tier 2+)
+    if (this.player.consumeAttack()) {
+      this.combat.attackPressed();
+    }
+    // Power button — manual energy generation
+    if (this.player.consumePower()) {
+      this.resources.manualGenerate();
+      this.audio.play("sfx_power_up");
+    }
+    // Upgrade menu toggle
+    if (this.player.consumeUpgradeToggle()) {
+      this.shop.toggle();
+    }
+
+    // Combat (manual + auto)
     this.combat.update(delta);
 
     // Zone spawning

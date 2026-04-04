@@ -19,7 +19,14 @@ export class PlayerStation {
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
   };
+  private attackKeys!: Phaser.Input.Keyboard.Key[];
+  private powerKey!: Phaser.Input.Keyboard.Key;
+  private upgradeKey!: Phaser.Input.Keyboard.Key;
+  private pad: Phaser.Input.Gamepad.Gamepad | null = null;
   private thrustEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private padAttackJust: boolean = false;
+  private padPowerJust: boolean = false;
+  private padUpgradeJust: boolean = false;
 
   isLocked: boolean = false;
 
@@ -49,7 +56,7 @@ export class PlayerStation {
     this.body.setDrag(0.95);
     this.body.setScale(this.size / 32);
 
-    // Input
+    // Movement keys
     this.cursors = scene.input.keyboard!.createCursorKeys();
     this.wasd = {
       W: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
@@ -57,6 +64,37 @@ export class PlayerStation {
       S: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       D: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
+
+    // Action keys
+    this.attackKeys = [
+      scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+      scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.J),
+    ];
+    this.powerKey = scene.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.K
+    );
+    this.upgradeKey = scene.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.E
+    );
+
+    // Gamepad support
+    if (scene.input.gamepad) {
+      scene.input.gamepad.once(
+        "connected",
+        (pad: Phaser.Input.Gamepad.Gamepad) => {
+          this.pad = pad;
+        }
+      );
+      // One-shot button events (button index: 0=A, 1=B, 9=Start)
+      scene.input.gamepad.on(
+        "down",
+        (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
+          if (button.index === 0) this.padAttackJust = true;
+          if (button.index === 1) this.padPowerJust = true;
+          if (button.index === 9) this.padUpgradeJust = true;
+        }
+      );
+    }
 
     // Camera follow
     scene.cameras.main.startFollow(this.body, true, 0.08, 0.08);
@@ -71,7 +109,6 @@ export class PlayerStation {
     cy: number,
     radius: number
   ): void {
-    // Main body — octagon shape
     g.fillStyle(COLORS.station);
     const sides = 8;
     const points: Phaser.Geom.Point[] = [];
@@ -85,12 +122,8 @@ export class PlayerStation {
       );
     }
     g.fillPoints(points, true);
-
-    // Glow outline
     g.lineStyle(2, COLORS.stationGlow, 0.6);
     g.strokePoints(points, true);
-
-    // Center dot
     g.fillStyle(COLORS.stationGlow);
     g.fillCircle(cx, cy, radius * 0.15);
   }
@@ -117,28 +150,44 @@ export class PlayerStation {
   }
 
   update(_delta: number): void {
+    // Refresh gamepad reference in case it connected after scene start
+    if (!this.pad && (this.scene.input.gamepad?.total ?? 0) > 0) {
+      this.pad = this.scene.input.gamepad!.getPad(0);
+    }
+
     if (this.isLocked) {
       this.body.setAccelerationX(0);
       this.body.setAccelerationY(0);
       if (this.thrustEmitter) this.thrustEmitter.emitting = false;
       return;
     }
+
     const accel = this.speed * 3;
+    const stickX = this.pad?.axes[0]?.getValue() ?? 0;
+    const stickY = this.pad?.axes[1]?.getValue() ?? 0;
 
     // Horizontal
-    if (this.cursors.left.isDown || this.wasd.A.isDown) {
-      this.body.setAccelerationX(-accel);
-    } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-      this.body.setAccelerationX(accel);
+    if (this.cursors.left.isDown || this.wasd.A.isDown || stickX < -0.2) {
+      this.body.setAccelerationX(-accel * Math.max(Math.abs(stickX), 1));
+    } else if (
+      this.cursors.right.isDown ||
+      this.wasd.D.isDown ||
+      stickX > 0.2
+    ) {
+      this.body.setAccelerationX(accel * Math.max(Math.abs(stickX), 1));
     } else {
       this.body.setAccelerationX(0);
     }
 
     // Vertical
-    if (this.cursors.up.isDown || this.wasd.W.isDown) {
-      this.body.setAccelerationY(-accel);
-    } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
-      this.body.setAccelerationY(accel);
+    if (this.cursors.up.isDown || this.wasd.W.isDown || stickY < -0.2) {
+      this.body.setAccelerationY(-accel * Math.max(Math.abs(stickY), 1));
+    } else if (
+      this.cursors.down.isDown ||
+      this.wasd.S.isDown ||
+      stickY > 0.2
+    ) {
+      this.body.setAccelerationY(accel * Math.max(Math.abs(stickY), 1));
     } else {
       this.body.setAccelerationY(0);
     }
@@ -159,11 +208,39 @@ export class PlayerStation {
       this.cursors.left.isDown ||
       this.wasd.A.isDown ||
       this.cursors.right.isDown ||
-      this.wasd.D.isDown;
+      this.wasd.D.isDown ||
+      Math.abs(stickX) > 0.2 ||
+      Math.abs(stickY) > 0.2;
 
     if (this.thrustEmitter) {
       this.thrustEmitter.emitting = isThrusting;
     }
+  }
+
+  /** Returns true if attack was pressed this frame (Space/J or gamepad A). Clears the flag. */
+  consumeAttack(): boolean {
+    const keyJustDown = this.attackKeys.some((k) =>
+      Phaser.Input.Keyboard.JustDown(k)
+    );
+    const padJustDown = this.padAttackJust;
+    this.padAttackJust = false;
+    return keyJustDown || padJustDown;
+  }
+
+  /** Returns true if power key was pressed this frame (K or gamepad B). Clears the flag. */
+  consumePower(): boolean {
+    const keyJustDown = Phaser.Input.Keyboard.JustDown(this.powerKey);
+    const padJustDown = this.padPowerJust;
+    this.padPowerJust = false;
+    return keyJustDown || padJustDown;
+  }
+
+  /** Returns true if upgrade menu key was pressed this frame (E or gamepad Start). Clears the flag. */
+  consumeUpgradeToggle(): boolean {
+    const keyJustDown = Phaser.Input.Keyboard.JustDown(this.upgradeKey);
+    const padJustDown = this.padUpgradeJust;
+    this.padUpgradeJust = false;
+    return keyJustDown || padJustDown;
   }
 
   applyGravity(gx: number, gy: number): void {
@@ -184,7 +261,6 @@ export class PlayerStation {
     const scale = newSize / 32;
     this.body.setScale(scale);
     const body = this.body.body as Phaser.Physics.Arcade.Body;
-    // Radius in unscaled texture-space; offset centers it in the 64x64 texture.
     const radius = newSize;
     body.setCircle(radius, 32 - radius, 32 - radius);
   }

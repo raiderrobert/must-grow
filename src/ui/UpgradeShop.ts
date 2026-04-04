@@ -63,6 +63,12 @@ export class UpgradeShop {
       });
   }
 
+  toggle(): void {
+    this.isOpen = !this.isOpen;
+    this.container.setVisible(this.isOpen);
+    if (this.isOpen) this.rebuild();
+  }
+
   setDependencies(
     player: PlayerStation,
     combat: CombatSystem,
