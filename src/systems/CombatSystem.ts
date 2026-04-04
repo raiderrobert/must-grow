@@ -5,7 +5,6 @@ import { Debris } from "@/entities/Debris";
 import { ResourceManager } from "@/systems/ResourceManager";
 import { ZoneManager } from "@/systems/ZoneManager";
 import { COLORS, ENERGY_FROM_DESTROY_BASE } from "@/constants";
-import type { UpgradeManager } from "@/systems/UpgradeManager";
 import type { AudioManager } from "@/systems/AudioManager";
 
 export class CombatSystem {
@@ -13,34 +12,36 @@ export class CombatSystem {
   private player: PlayerStation;
   private resources: ResourceManager;
   private zones: ZoneManager;
-  private upgrades: UpgradeManager | null = null;
   private audio: AudioManager | null = null;
   private debrisList: Debris[] = [];
-
-  // State
-  clampedTarget: SpaceObject | null = null;
-  private beamCooldown: number = 0;
   private beamGraphics: Phaser.GameObjects.Graphics;
+  private droneGraphics: Phaser.GameObjects.Graphics;
+  private droneBeamGraphics: Phaser.GameObjects.Graphics;
+
+  // Auto-fire state
   private autoFireTimer: number = 0;
-  private autoFireInterval: number = 1000;
 
-  // Stats (modified by upgrades)
-  clampRange: number = 80;
-  beamDamage: number = 10;
-  beamCooldownMax: number = 500;
-  beamRange: number = 200;
-  jawStrengthMultiplier: number = 1.0;
-  chewSpeedMultiplier: number = 1.0;
-  energyAmplifierMultiplier: number = 1.0;
+  // Burst fire state
+  private burstCooldown: number = 0;
+  private burstQueue: number = 0;
+  private burstFireTimer: number = 0;
+  private readonly BURST_FIRE_INTERVAL = 80; // ms between shots in a burst
 
-  // Drone swarm
+  // Drone state
   private droneAngles: number[] = [];
   private droneCooldowns: number[] = [];
-  private droneGraphics!: Phaser.GameObjects.Graphics;
-  private droneBeamGraphics!: Phaser.GameObjects.Graphics;
   private readonly DRONE_ORBIT_RADIUS = 60;
-  private readonly DRONE_FIRE_INTERVAL = 2500; // ms between drone shots
+  private readonly DRONE_FIRE_INTERVAL = 2500;
   private readonly DRONE_DAMAGE = 5;
+
+  // ── Stats (modified by upgrade cards) ────────────────────────────
+  autoFireCooldown: number = 900;  // ms between auto shots
+  autoShotCount: number = 1;       // shots per auto trigger
+  spreadAngle: number = 0;         // total spread in degrees
+  beamDamage: number = 10;
+  beamRange: number = 300;
+  burstShotCount: number = 3;      // shots per manual burst activation
+  burstCooldownMax: number = 800;  // ms before another burst allowed
 
   debrisGroup!: Phaser.Physics.Arcade.Group;
 
@@ -59,7 +60,6 @@ export class CombatSystem {
     this.droneBeamGraphics = scene.add.graphics().setDepth(5);
     this.debrisGroup = scene.physics.add.group();
 
-    // Ensure particle texture exists
     if (!scene.textures.exists("particle")) {
       const g = scene.add.graphics();
       g.fillStyle(0xffffff);
@@ -67,138 +67,115 @@ export class CombatSystem {
       g.generateTexture("particle", 4, 4);
       g.destroy();
     }
-
-  }
-
-  getWorldGraphics(): Phaser.GameObjects.Graphics[] {
-    return [this.beamGraphics, this.droneGraphics, this.droneBeamGraphics];
-  }
-
-  setUpgrades(upgrades: UpgradeManager): void {
-    this.upgrades = upgrades;
   }
 
   setAudio(audio: AudioManager): void {
     this.audio = audio;
   }
 
-  /** Called when the player presses the attack button. */
-  attackPressed(): void {
-    if (this.clampedTarget) {
-      this.chew();
-      return;
-    }
-
-    if (this.player.tier === 1) {
-      // Find nearest object in clamp range
-      const objects = this.zones.getObjects();
-      let nearest: SpaceObject | null = null;
-      let nearestDist = this.clampRange;
-
-      for (const obj of objects) {
-        const dist = Phaser.Math.Distance.Between(
-          this.player.x, this.player.y,
-          obj.sprite.x, obj.sprite.y
-        );
-        if (dist < nearestDist) {
-          nearest = obj;
-          nearestDist = dist;
-        }
-      }
-
-      if (nearest) {
-        this.clampedTarget = nearest;
-        nearest.isBeingChewed = true;
-        const reducedClicks = Math.max(
-          Math.ceil(nearest.chewClicksRemaining / this.chewSpeedMultiplier),
-          1
-        );
-        nearest.chewClicksRemaining = reducedClicks;
-        this.chew();
-      }
-    } else {
-      // Fire beam at nearest object in range
-      if (this.beamCooldown > 0) return;
-
-      const objects = this.zones.getObjects();
-      let nearest: SpaceObject | null = null;
-      let nearestDist = this.beamRange;
-
-      for (const obj of objects) {
-        const dist = Phaser.Math.Distance.Between(
-          this.player.x, this.player.y,
-          obj.sprite.x, obj.sprite.y
-        );
-        if (dist < nearestDist) {
-          nearest = obj;
-          nearestDist = dist;
-        }
-      }
-
-      if (nearest) this.fireBeam(nearest);
-    }
+  getWorldGraphics(): Phaser.GameObjects.Graphics[] {
+    return [this.beamGraphics, this.droneGraphics, this.droneBeamGraphics];
   }
 
-  private chew(): void {
-    if (!this.clampedTarget) return;
-
-    const result = this.clampedTarget.chew();
-    this.resources.addMass(result.mass * this.jawStrengthMultiplier);
-    this.resources.addEnergy(result.energy);
-
-    if (result.depleted) {
-      this.zones.removeObject(this.clampedTarget);
-      this.clampedTarget = null;
-    }
+  /** Called by GameScene when the player presses the burst key. */
+  triggerBurst(): void {
+    if (this.burstCooldown > 0) return;
+    if (!this.resources.spendBurst()) return;
+    this.burstQueue = this.burstShotCount;
+    this.burstFireTimer = 0;
+    this.burstCooldown = this.burstCooldownMax;
   }
 
-  fireBeam(target: SpaceObject): void {
-    this.beamCooldown = this.beamCooldownMax;
+  private findNearest(fromX: number, fromY: number, range: number): SpaceObject | null {
+    let nearest: SpaceObject | null = null;
+    let nearestDist = range;
+    for (const obj of this.zones.getObjects()) {
+      const dist = Phaser.Math.Distance.Between(fromX, fromY, obj.sprite.x, obj.sprite.y);
+      if (dist < nearestDist) { nearest = obj; nearestDist = dist; }
+    }
+    return nearest;
+  }
 
-    this.beamGraphics.clear();
-    this.beamGraphics.lineStyle(2, COLORS.beam, 0.8);
-    this.beamGraphics.lineBetween(
-      this.player.x,
-      this.player.y,
-      target.sprite.x,
-      target.sprite.y
-    );
-    this.scene.time.delayedCall(100, () => this.beamGraphics.clear());
+  private fireBeamsAt(
+    fromX: number,
+    fromY: number,
+    target: SpaceObject,
+    shotCount: number,
+    spread: number,
+    damage: number,
+    color: number = COLORS.beam,
+    volumeScale: number = 1
+  ): void {
+    const baseAngle = Phaser.Math.Angle.Between(fromX, fromY, target.sprite.x, target.sprite.y);
+    const spreadRad = Phaser.Math.DegToRad(spread);
+    const step = shotCount > 1 ? spreadRad / (shotCount - 1) : 0;
+    const startAngle = baseAngle - spreadRad / 2;
 
-    this.audio?.play("sfx_zap");
-
-    // Binding energy check — show "TOO SMALL" but still damage
-    if (
-      target.bindingMassThreshold > 0 &&
-      this.resources.totalMassEarned < target.bindingMassThreshold
-    ) {
-      const text = this.scene.add
-        .text(target.sprite.x, target.sprite.y - 20, "TOO SMALL", {
-          fontFamily: "monospace",
-          fontSize: "10px",
-          color: "#ff4444",
-        })
-        .setOrigin(0.5);
-      this.scene.tweens.add({
-        targets: text,
-        alpha: 0,
-        y: text.y - 20,
-        duration: 1000,
-        onComplete: () => text.destroy(),
-      });
+    this.beamGraphics.lineStyle(2, color, 0.85);
+    for (let i = 0; i < shotCount; i++) {
+      const angle = shotCount === 1 ? baseAngle : startAngle + step * i;
+      const range = this.beamRange * 1.2;
+      this.beamGraphics.lineBetween(
+        fromX, fromY,
+        fromX + Math.cos(angle) * range,
+        fromY + Math.sin(angle) * range
+      );
     }
 
-    const destroyed = target.takeDamage(this.beamDamage);
+    this.scene.time.delayedCall(90, () => this.beamGraphics.clear());
+    this.audio?.play("sfx_zap", volumeScale * 0.7);
+
+    // Primary shot always hits the aimed target
+    const destroyed = target.takeDamage(damage);
     if (destroyed) {
-      this.audio?.play("sfx_explosion");
+      this.audio?.play("sfx_explosion", 0.8);
       this.createExplosion(target.sprite.x, target.sprite.y, target.config.color);
       this.spawnDebris(target);
-      this.resources.addEnergy(
-        (target.config.energyYield + ENERGY_FROM_DESTROY_BASE) *
-          this.energyAmplifierMultiplier
-      );
+      this.resources.addMass(target.config.massYield);
+      this.resources.onKill();
       this.zones.removeObject(target);
     }
+  }
+
+  private updateAutoFire(delta: number): void {
+    this.autoFireTimer += delta;
+    if (this.autoFireTimer < this.autoFireCooldown) return;
+    this.autoFireTimer = 0;
+
+    const nearest = this.findNearest(this.player.x, this.player.y, this.beamRange);
+    if (!nearest) return;
+
+    this.fireBeamsAt(
+      this.player.x, this.player.y,
+      nearest,
+      this.autoShotCount,
+      this.spreadAngle,
+      this.beamDamage,
+      COLORS.beam,
+      0.5
+    );
+  }
+
+  private updateBurstQueue(delta: number): void {
+    if (this.burstQueue <= 0) return;
+
+    this.burstFireTimer += delta;
+    if (this.burstFireTimer < this.BURST_FIRE_INTERVAL) return;
+    this.burstFireTimer = 0;
+    this.burstQueue--;
+
+    const nearest = this.findNearest(this.player.x, this.player.y, this.beamRange * 1.3);
+    if (!nearest) return;
+
+    this.fireBeamsAt(
+      this.player.x, this.player.y,
+      nearest,
+      Math.max(1, Math.ceil(this.autoShotCount * 1.5)),
+      this.spreadAngle + 10,
+      Math.round(this.beamDamage * 1.5),
+      0xffd93d, // gold burst color
+      1.0
+    );
   }
 
   private createExplosion(x: number, y: number, color: number): void {
@@ -215,266 +192,90 @@ export class CombatSystem {
   }
 
   private spawnDebris(source: SpaceObject): void {
-    const count = 3 + Math.floor(Math.random() * 3);
-    const massEach = source.config.massYield / count;
-    const energyEach = source.config.energyYield / count;
-
+    const count = 2 + Math.floor(Math.random() * 3);
+    const energyEach = (source.config.energyYield + ENERGY_FROM_DESTROY_BASE) / count;
     for (let i = 0; i < count; i++) {
-      const debris = new Debris(this.scene, {
-        x: source.sprite.x,
-        y: source.sprite.y,
-        mass: massEach,
+      const d = new Debris(this.scene, {
+        x: source.sprite.x, y: source.sprite.y,
+        mass: 0, // mass awarded immediately on kill
         energy: energyEach,
       });
-      this.debrisList.push(debris);
-      this.debrisGroup.add(debris.sprite);
+      this.debrisList.push(d);
+      this.debrisGroup.add(d.sprite);
     }
   }
 
   collectDebris(debris: Debris): void {
-    this.resources.addMass(debris.mass);
-    this.resources.addEnergy(debris.energy);
+    this.resources.energy = Math.min(
+      this.resources.batteryCapacity,
+      this.resources.energy + debris.energy
+    );
     this.audio?.playWithVariation("sfx_pickup");
     const idx = this.debrisList.indexOf(debris);
     if (idx !== -1) this.debrisList.splice(idx, 1);
     debris.destroy();
   }
 
-  releaseClamp(): void {
-    if (this.clampedTarget) {
-      this.clampedTarget.isBeingChewed = false;
-      this.clampedTarget = null;
-    }
-  }
-
-  private updateAutoTurrets(delta: number, turretCount: number): void {
-    if (turretCount === 0 || !this.resources.isSystemOnline("autoTurrets")) return;
-
-    this.autoFireTimer += delta;
-    if (this.autoFireTimer < this.autoFireInterval / turretCount) return;
-    this.autoFireTimer = 0;
-
-    const objects = this.zones.getObjects();
-    let nearest: SpaceObject | null = null;
-    let nearestDist = this.beamRange * 1.5;
-
-    for (const obj of objects) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        obj.sprite.x,
-        obj.sprite.y
-      );
-      if (dist < nearestDist) {
-        nearest = obj;
-        nearestDist = dist;
-      }
-    }
-
-    if (nearest) {
-      this.fireBeam(nearest);
-    }
-  }
-
-  updateTractorBeam(delta: number, tractorLevel: number): void {
-    if (tractorLevel === 0 || !this.resources.isSystemOnline("tractorBeam")) return;
-    void delta;
-
-    const range = 150 + tractorLevel * 50;
-    for (const debris of this.debrisList) {
-      if (!debris.sprite.active) continue;
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        debris.sprite.x,
-        debris.sprite.y
-      );
-      if (dist < range) {
-        const angle = Phaser.Math.Angle.Between(
-          debris.sprite.x,
-          debris.sprite.y,
-          this.player.x,
-          this.player.y
-        );
-        const pullSpeed = 80 + tractorLevel * 30;
-        debris.sprite.body!.velocity.x = Math.cos(angle) * pullSpeed;
-        debris.sprite.body!.velocity.y = Math.sin(angle) * pullSpeed;
-
-        if (dist < 30) {
-          this.collectDebris(debris);
-        }
-      }
-    }
-  }
-
-  updateGravityWell(delta: number, gravityWellLevel: number): void {
-    if (gravityWellLevel === 0 || !this.resources.isSystemOnline("gravityWell")) return;
-
-    const range = 300 + gravityWellLevel * 100;
-    const objects = this.zones.getObjects();
-
-    for (const obj of objects) {
-      if (obj.isBeingChewed) continue;
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        obj.sprite.x,
-        obj.sprite.y
-      );
-      if (dist < range && obj.config.size < this.player.size * 0.5) {
-        const angle = Phaser.Math.Angle.Between(
-          obj.sprite.x,
-          obj.sprite.y,
-          this.player.x,
-          this.player.y
-        );
-        const pullSpeed = 30 + gravityWellLevel * 15;
-        obj.sprite.body!.velocity.x +=
-          Math.cos(angle) * pullSpeed * (delta / 1000);
-        obj.sprite.body!.velocity.y +=
-          Math.sin(angle) * pullSpeed * (delta / 1000);
-      }
-    }
-  }
-
   private updateDroneSwarm(delta: number, droneCount: number): void {
     this.droneGraphics.clear();
-
-    if (droneCount === 0 || !this.resources.isSystemOnline("drones")) {
+    if (droneCount === 0) {
       this.droneAngles = [];
       this.droneCooldowns = [];
       return;
     }
 
-    // Resize arrays to match active drone count
     while (this.droneAngles.length < droneCount) {
-      // Space new drones evenly in the orbit
-      this.droneAngles.push(
-        (this.droneAngles.length / droneCount) * Math.PI * 2
-      );
+      this.droneAngles.push((this.droneAngles.length / droneCount) * Math.PI * 2);
       this.droneCooldowns.push(Math.random() * this.DRONE_FIRE_INTERVAL);
     }
     this.droneAngles.length = droneCount;
     this.droneCooldowns.length = droneCount;
 
-    const orbitRadius =
-      this.DRONE_ORBIT_RADIUS + this.player.size * 0.5;
-    const rotateSpeed = 0.0015 * delta; // radians per ms
+    const orbitRadius = this.DRONE_ORBIT_RADIUS + this.player.size * 0.5;
+    const rotateSpeed = 0.0015 * delta;
 
     for (let i = 0; i < droneCount; i++) {
       this.droneAngles[i] += rotateSpeed;
-      const dx = Math.cos(this.droneAngles[i]) * orbitRadius;
-      const dy = Math.sin(this.droneAngles[i]) * orbitRadius;
-      const droneX = this.player.x + dx;
-      const droneY = this.player.y + dy;
+      const droneX = this.player.x + Math.cos(this.droneAngles[i]) * orbitRadius;
+      const droneY = this.player.y + Math.sin(this.droneAngles[i]) * orbitRadius;
 
-      // Draw drone body (small triangle pointing along orbit)
       const fwd = this.droneAngles[i] + Math.PI / 2;
-      const size = 5;
+      const sz = 5;
       this.droneGraphics.fillStyle(COLORS.mass, 0.9);
-      const pts = [
-        new Phaser.Geom.Point(
-          droneX + Math.cos(fwd) * size,
-          droneY + Math.sin(fwd) * size
-        ),
-        new Phaser.Geom.Point(
-          droneX + Math.cos(fwd + 2.3) * size,
-          droneY + Math.sin(fwd + 2.3) * size
-        ),
-        new Phaser.Geom.Point(
-          droneX + Math.cos(fwd - 2.3) * size,
-          droneY + Math.sin(fwd - 2.3) * size
-        ),
-      ];
-      this.droneGraphics.fillPoints(pts, true);
+      this.droneGraphics.fillTriangle(
+        droneX + Math.cos(fwd) * sz, droneY + Math.sin(fwd) * sz,
+        droneX + Math.cos(fwd + 2.3) * sz, droneY + Math.sin(fwd + 2.3) * sz,
+        droneX + Math.cos(fwd - 2.3) * sz, droneY + Math.sin(fwd - 2.3) * sz
+      );
 
-      // Attack cooldown
       this.droneCooldowns[i] -= delta;
       if (this.droneCooldowns[i] <= 0) {
         this.droneCooldowns[i] = this.DRONE_FIRE_INTERVAL;
-        this.droneFire(droneX, droneY);
+        const nearest = this.findNearest(droneX, droneY, this.beamRange);
+        if (nearest) {
+          this.droneBeamGraphics.lineStyle(1, COLORS.mass, 0.7);
+          this.droneBeamGraphics.lineBetween(droneX, droneY, nearest.sprite.x, nearest.sprite.y);
+          this.scene.time.delayedCall(80, () => this.droneBeamGraphics.clear());
+          const destroyed = nearest.takeDamage(this.DRONE_DAMAGE);
+          if (destroyed) {
+            this.createExplosion(nearest.sprite.x, nearest.sprite.y, nearest.config.color);
+            this.spawnDebris(nearest);
+            this.resources.addMass(nearest.config.massYield);
+            this.resources.onKill();
+            this.zones.removeObject(nearest);
+          }
+        }
       }
     }
   }
 
-  private droneFire(droneX: number, droneY: number): void {
-    const objects = this.zones.getObjects();
-    let nearest: SpaceObject | null = null;
-    let nearestDist = this.beamRange;
+  update(delta: number, droneCount: number = 0): void {
+    if (this.burstCooldown > 0) this.burstCooldown -= delta;
 
-    for (const obj of objects) {
-      const dist = Phaser.Math.Distance.Between(
-        droneX,
-        droneY,
-        obj.sprite.x,
-        obj.sprite.y
-      );
-      if (dist < nearestDist) {
-        nearest = obj;
-        nearestDist = dist;
-      }
-    }
-    if (!nearest) return;
-
-    // Draw drone beam (brief flash)
-    this.droneBeamGraphics.lineStyle(1, COLORS.mass, 0.7);
-    this.droneBeamGraphics.lineBetween(
-      droneX,
-      droneY,
-      nearest.sprite.x,
-      nearest.sprite.y
-    );
-    this.scene.time.delayedCall(80, () => this.droneBeamGraphics.clear());
-
-    const destroyed = nearest.takeDamage(this.DRONE_DAMAGE);
-    if (destroyed) {
-      this.audio?.play("sfx_explosion", 0.4);
-      this.createExplosion(
-        nearest.sprite.x,
-        nearest.sprite.y,
-        nearest.config.color
-      );
-      this.spawnDebris(nearest);
-      this.resources.addEnergy(
-        (nearest.config.energyYield + ENERGY_FROM_DESTROY_BASE) *
-          this.energyAmplifierMultiplier
-      );
-      this.zones.removeObject(nearest);
-    }
-  }
-
-  update(delta: number): void {
-    if (this.beamCooldown > 0) {
-      this.beamCooldown -= delta;
-    }
-
-    // Release clamp if target drifted too far
-    if (this.clampedTarget) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        this.clampedTarget.sprite.x,
-        this.clampedTarget.sprite.y
-      );
-      if (dist > this.clampRange * 2) {
-        this.releaseClamp();
-      }
-    }
-
-    // Auto systems
-    const turretCount = this.upgrades?.getLevel("autoTurret") ?? 0;
-    this.updateAutoTurrets(delta, turretCount);
-
-    const tractorLevel = this.upgrades?.getLevel("tractorBeam") ?? 0;
-    this.updateTractorBeam(delta, tractorLevel);
-
-    const gravWellLevel = this.upgrades?.getLevel("gravityWell") ?? 0;
-    this.updateGravityWell(delta, gravWellLevel);
-
-    const droneCount = this.upgrades?.getLevel("droneSwarm") ?? 0;
+    this.updateAutoFire(delta);
+    this.updateBurstQueue(delta);
     this.updateDroneSwarm(delta, droneCount);
 
-    // Clean up despawned debris
-    this.debrisList = this.debrisList.filter((d) => d.sprite.active);
+    this.debrisList = this.debrisList.filter(d => d.sprite.active);
   }
 }
