@@ -31,6 +31,7 @@ export class UpgradeScreen {
   private keyObjects: Phaser.Input.Keyboard.Key[] = [];
   private gamepadPollTimer?: Phaser.Time.TimerEvent;
   private stickCooldown: number = 0;
+  private inputReady: boolean = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -115,7 +116,7 @@ export class UpgradeScreen {
       this.keyObjects.push(key);
       const cardIndex = i;
       key.once("down", () => {
-        if (this.isVisible) this.pick(cards[cardIndex]);
+        if (this.isVisible && this.inputReady) this.pick(cards[cardIndex]);
       });
     }
 
@@ -123,7 +124,15 @@ export class UpgradeScreen {
     this.container.setDepth(500);
     if (this.mainCam) this.mainCam.ignore(this.container);
 
-    this.updateHighlight();
+    // Guard: dim everything, ignore input for 800ms
+    this.inputReady = false;
+    this.container.setAlpha(0.4);
+    this.scene.time.delayedCall(800, () => {
+      if (!this.isVisible) return;
+      this.inputReady = true;
+      this.container?.setAlpha(1.0);
+      this.updateHighlight();
+    });
 
     // Poll gamepad at ~60fps
     this.gamepadPollTimer = this.scene.time.addEvent({
@@ -153,7 +162,7 @@ export class UpgradeScreen {
 
     bg.on("pointerover", () => { if (bg.fillColor !== 0x222255) bg.setFillStyle(0x1a1a44); });
     bg.on("pointerout", () => { if (this.cardBackgrounds.indexOf(bg) !== this.selectedIndex) bg.setFillStyle(0x111133); });
-    bg.on("pointerdown", () => this.pick(card));
+    bg.on("pointerdown", () => { if (this.inputReady) this.pick(card); });
 
     objects.push(
       this.scene.add.text(cx, cy - h / 2 + 20, `[${keyNumber}]`, {
@@ -196,7 +205,7 @@ export class UpgradeScreen {
   }
 
   private pollGamepad(): void {
-    if (!this.isVisible || !this.inputManager) return;
+    if (!this.isVisible || !this.inputManager || !this.inputReady) return;
 
     this.stickCooldown = Math.max(0, this.stickCooldown - 16);
 
