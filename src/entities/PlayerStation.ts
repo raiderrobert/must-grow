@@ -181,7 +181,11 @@ export class PlayerStation {
 
   setSize(newSize: number): void {
     this.size = newSize;
-    this.body.setScale(newSize / 32);
-    (this.body.body as Phaser.Physics.Arcade.Body).setCircle(32, 0, 0);
+    const scale = newSize / 32;
+    this.body.setScale(scale);
+    const body = this.body.body as Phaser.Physics.Arcade.Body;
+    // Radius in unscaled texture-space; offset centers it in the 64x64 texture.
+    const radius = newSize;
+    body.setCircle(radius, 32 - radius, 32 - radius);
   }
 }
