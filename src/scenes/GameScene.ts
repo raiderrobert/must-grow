@@ -133,7 +133,7 @@ export class GameScene extends Phaser.Scene {
     this.trajectoryPredictor = new TrajectoryPredictor(this, this.gravity);
 
     this.upgradeScreen = new UpgradeScreen(
-      this, this.combat, this.resources, this.player, this.audio
+      this, this.combat, this.resources, this.player, this.audio, this.inputManager
     );
 
     this.input.once("pointerdown", () => this.audio.music.play("ambient"));

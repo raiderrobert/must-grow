@@ -147,4 +147,8 @@ export class InputManager {
   get isKeyboard(): boolean {
     return this._lastInputType === "keyboard";
   }
+  /** Expose gamepad for upgrade screen confirmation polling. */
+  get gamepad(): Phaser.Input.Gamepad.Gamepad | null {
+    return this.pad;
+  }
 }
