@@ -6,6 +6,7 @@ export interface GravityBody {
   y: number;
   gravityMass: number;
   killRadius?: number; // explicit surface radius; overrides the calculated default
+  name?: string;      // for identification (e.g., "Earth", "Sun")
 }
 
 export interface GravityPull {

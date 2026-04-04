@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLORS, WORLD_CENTER_X, WORLD_CENTER_Y } from "@/constants";
+import { COLORS } from "@/constants";
 import { BODY_DEFS } from "@/data/bodies";
 import type { GravitySystem, GravityBody } from "@/systems/GravitySystem";
 import { computeViewRange, worldToMinimap } from "@/ui/MinimapMath";
@@ -70,11 +70,8 @@ export class Minimap {
   private rebuildBodyInfo(): void {
     this.bodyInfoMap.clear();
     for (const body of this.gravity.getBodies()) {
-      const def = BODY_DEFS.find(d => {
-        const bx = WORLD_CENTER_X + Math.cos(d.angle) * d.distance;
-        const by = WORLD_CENTER_Y + Math.sin(d.angle) * d.distance;
-        return Math.abs(bx - body.x) < 1 && Math.abs(by - body.y) < 1;
-      });
+      if (!body.name) continue;
+      const def = BODY_DEFS.find(d => d.name === body.name);
       if (def) {
         this.bodyInfoMap.set(body, {
           name: def.name,

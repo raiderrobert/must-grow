@@ -86,7 +86,7 @@ export class GameScene extends Phaser.Scene {
       spaceObj.sprite.setVelocity(0, 0);
       this.zones.addFixedObject(spaceObj);
 
-      const gravityBody: GravityBody = { x, y, gravityMass: def.gravityMass, killRadius: def.killRadius };
+      const gravityBody: GravityBody = { x, y, gravityMass: def.gravityMass, killRadius: def.killRadius, name: def.name };
       this.gravity.addBody(gravityBody);
 
       rendered.graphics.setData("origX", x);
