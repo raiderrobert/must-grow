@@ -8,6 +8,7 @@ import { GravitySystem } from "@/systems/GravitySystem";
 import { ZoneManager } from "@/systems/ZoneManager";
 import { getTierForMass, getTierName } from "@/data/tiers";
 import { CombatSystem } from "@/systems/CombatSystem";
+import { HUD } from "@/ui/HUD";
 
 export class GameScene extends Phaser.Scene {
   player!: PlayerStation;
@@ -16,6 +17,7 @@ export class GameScene extends Phaser.Scene {
   gravity!: GravitySystem;
   zones!: ZoneManager;
   combat!: CombatSystem;
+  hud!: HUD;
   currentTier: number = 1;
 
   constructor() {
@@ -46,6 +48,8 @@ export class GameScene extends Phaser.Scene {
 
     this.combat = new CombatSystem(this, this.player, this.resources, this.zones);
     this.combat.setUpgrades(this.upgrades);
+
+    this.hud = new HUD(this, this.resources);
 
     // Collision: player vs space objects
     this.physics.add.overlap(
@@ -101,7 +105,10 @@ export class GameScene extends Phaser.Scene {
       1 + Math.log2(1 + this.resources.totalMassEarned) * 0.3;
     this.player.setSize(baseSize * growthFactor);
 
-    // 7. Danger zones
+    // 7. HUD
+    this.hud.update();
+
+    // 8. Danger zones
     this.gravity.renderDangerZones(
       this.player.x,
       this.player.y,
