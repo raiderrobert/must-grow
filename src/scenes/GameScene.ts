@@ -96,7 +96,11 @@ export class GameScene extends Phaser.Scene {
 
     this.orbitStates = createOrbitStates(BODY_DEFS);
 
-    // Spawn player near Earth's actual starting position with orbital velocity
+    // Run one orbit step with delta=0 so all bodies snap to their
+    // parent-relative positions before we try to spawn near Earth
+    this.updateOrbits(0);
+
+    // Now Earth is in its correct position — spawn player near it
     this.spawnNearEarth();
 
     this.zones.populate(this.player.x, this.player.y, 1);
