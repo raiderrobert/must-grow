@@ -60,8 +60,10 @@ export const SOLAR_DISTANCES = {
 export const GRAVITY_SCALE = 0.08;
 
 // Player spawn position — used at game start and on respawn
+// 1500px above world center = 4700px from Earth's center, safely above the 3500px kill zone
+// and inside the Near-Earth Orbit zone (0-8000px) where debris spawns
 export const PLAYER_SPAWN_X = WORLD_CENTER_X;
-export const PLAYER_SPAWN_Y = WORLD_CENTER_Y - 8_000;
+export const PLAYER_SPAWN_Y = WORLD_CENTER_Y - 1_500;
 
 // Camera
 export const ZOOM_START = 1.5; // zoom at game start
