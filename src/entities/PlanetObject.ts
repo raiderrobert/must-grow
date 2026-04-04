@@ -19,37 +19,37 @@ export const PLANET_DEFS: PlanetDef[] = [
   {
     name: "Mercury", distance: 12_000, angle: 0.8,
     visualRadius: 400, color: 0x9b8b78, atmosphereColor: 0x7a6b5c,
-    config: { health: 2_000, massYield: 800, energyYield: 200, gravityMass: 800, biteRadius: 440 },
+    config: { health: 2_000, massYield: 800, energyYield: 200, gravityMass: 800 },
   },
   {
     name: "Venus", distance: 22_000, angle: 2.1,
     visualRadius: 900, color: 0xe8b84b, atmosphereColor: 0xd4983a,
-    config: { health: 5_000, massYield: 2_000, energyYield: 500, gravityMass: 2_000, biteRadius: 990 },
+    config: { health: 5_000, massYield: 2_000, energyYield: 500, gravityMass: 2_000 },
   },
   {
     name: "Mars", distance: 30_000, angle: 3.9,
     visualRadius: 700, color: 0xc1440e, atmosphereColor: 0xa03308,
-    config: { health: 3_000, massYield: 1_200, energyYield: 300, gravityMass: 1_200, biteRadius: 770 },
+    config: { health: 3_000, massYield: 1_200, energyYield: 300, gravityMass: 1_200 },
   },
   {
     name: "Jupiter", distance: 95_000, angle: 1.2,
     visualRadius: 8_000, color: 0xc88b3a, atmosphereColor: 0xaa7230,
-    config: { health: 50_000, massYield: 20_000, energyYield: 5_000, gravityMass: 20_000, biteRadius: 8_800 },
+    config: { health: 50_000, massYield: 20_000, energyYield: 5_000, gravityMass: 20_000 },
   },
   {
     name: "Saturn", distance: 140_000, angle: 4.5,
     visualRadius: 6_500, color: 0xe4d090, atmosphereColor: 0xc8b86a,
-    config: { health: 40_000, massYield: 16_000, energyYield: 4_000, gravityMass: 16_000, biteRadius: 7_150 },
+    config: { health: 40_000, massYield: 16_000, energyYield: 4_000, gravityMass: 16_000 },
   },
   {
     name: "Uranus", distance: 175_000, angle: 0.3,
     visualRadius: 3_500, color: 0x7de8e8, atmosphereColor: 0x5cc8c8,
-    config: { health: 25_000, massYield: 10_000, energyYield: 2_500, gravityMass: 10_000, biteRadius: 3_850 },
+    config: { health: 25_000, massYield: 10_000, energyYield: 2_500, gravityMass: 10_000 },
   },
   {
     name: "Neptune", distance: 200_000, angle: 2.8,
     visualRadius: 3_200, color: 0x3f54ba, atmosphereColor: 0x2d3d9a,
-    config: { health: 22_000, massYield: 9_000, energyYield: 2_200, gravityMass: 9_000, biteRadius: 3_520 },
+    config: { health: 22_000, massYield: 9_000, energyYield: 2_200, gravityMass: 9_000 },
   },
 ];
 

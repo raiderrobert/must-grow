@@ -10,8 +10,6 @@ export interface SpaceObjectConfig {
   gravityMass: number;
   color: number;
   name?: string;
-  /** Radius within which the player damages this object by proximity. 0 = laser only. */
-  biteRadius?: number;
 }
 
 export class SpaceObject {
@@ -87,14 +85,6 @@ export class SpaceObject {
 
   get healthRatio(): number {
     return this.health / this.maxHealth;
-  }
-
-  /** Returns true if the player is close enough to bite this object. */
-  isInBiteRange(playerX: number, playerY: number, playerSize: number): boolean {
-    const biteRadius = this.config.biteRadius ?? 0;
-    if (biteRadius === 0) return false;
-    const dist = Phaser.Math.Distance.Between(playerX, playerY, this.sprite.x, this.sprite.y);
-    return dist < biteRadius + playerSize;
   }
 
   destroy(): void {
