@@ -104,6 +104,9 @@ export class GameScene extends Phaser.Scene {
         if (debris) this.combat.collectDebris(debris);
       }
     );
+
+    this.gravityIndicatorGraphics = this.add.graphics().setDepth(10);
+    this.dangerVignette = this.add.graphics().setScrollFactor(0).setDepth(90);
   }
 
   update(_time: number, delta: number): void {
