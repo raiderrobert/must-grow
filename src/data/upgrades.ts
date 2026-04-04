@@ -52,6 +52,13 @@ export const UPGRADE_CARDS: UpgradeCard[] = [
   },
   // ── Uncommon ──────────────────────────────────────────────────────
   {
+    id: "beamRange",
+    name: "Long Range Optics",
+    description: "Beam range +40%",
+    rarity: "uncommon",
+    apply(combat) { combat.beamRange = Math.round(combat.beamRange * 1.4); },
+  },
+  {
     id: "damage",
     name: "High Yield",
     description: "Shot damage +30%",
