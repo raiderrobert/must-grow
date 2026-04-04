@@ -230,6 +230,19 @@ export class GameScene extends Phaser.Scene {
       : false;
     this.player.update(delta);
 
+    // Camera look-ahead: offset toward velocity direction
+    const pb = this.player.body.body as Phaser.Physics.Arcade.Body;
+    const velMag = Math.sqrt(pb.velocity.x ** 2 + pb.velocity.y ** 2);
+    if (velMag > 10) {
+      const lookAheadMax = 200;
+      const lookAheadFactor = Math.min(1, velMag / 1000);
+      const offsetX = (pb.velocity.x / velMag) * lookAheadMax * lookAheadFactor;
+      const offsetY = (pb.velocity.y / velMag) * lookAheadMax * lookAheadFactor;
+      this.cameras.main.setFollowOffset(-offsetX, -offsetY);
+    } else {
+      this.cameras.main.setFollowOffset(0, 0);
+    }
+
     // Burst fire
     if (this.inputManager.consumeAttack()) {
       this.combat.triggerBurst();

@@ -38,7 +38,7 @@ export class PlayerStation {
     this.body.setCollideWorldBounds(true);
     this.body.setScale(this.size / 32);
 
-    scene.cameras.main.startFollow(this.body, true, 0.08, 0.08);
+    scene.cameras.main.startFollow(this.body, true, 1, 1);
     this.initParticles();
   }
 
