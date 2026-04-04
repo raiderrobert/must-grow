@@ -9,6 +9,7 @@ import { getTierForMass, getTierName } from "@/data/tiers";
 import { CombatSystem } from "@/systems/CombatSystem";
 import { HUD } from "@/ui/HUD";
 import { UpgradeScreen } from "@/ui/UpgradeScreen";
+import { Minimap } from "@/ui/Minimap";
 import { AudioManager } from "@/systems/AudioManager";
 import { InputManager } from "@/systems/InputManager";
 import { SpaceObject } from "@/entities/SpaceObject";
@@ -32,6 +33,7 @@ export class GameScene extends Phaser.Scene {
   combat!: CombatSystem;
   hud!: HUD;
   upgradeScreen!: UpgradeScreen;
+  minimap!: Minimap;
   audio!: AudioManager;
   inputManager!: InputManager;
 
@@ -101,6 +103,7 @@ export class GameScene extends Phaser.Scene {
     this.combat.setAudio(this.audio);
 
     this.hud = new HUD(this, this.resources, this.combat, this.inputManager, this.audio);
+    this.minimap = new Minimap(this, this.gravity);
 
     this.upgradeScreen = new UpgradeScreen(
       this, this.combat, this.resources, this.player, this.audio
@@ -157,11 +160,12 @@ export class GameScene extends Phaser.Scene {
       (item) => uiCam.ignore(item);
 
     // main camera ignores HUD; also tell dangerVignette to go to uiCam only
-    const hudObjects = [...this.hud.getObjects(), this.dangerVignette];
+    const hudObjects = [...this.hud.getObjects(), ...this.minimap.getObjects(), this.dangerVignette];
     this.cameras.main.ignore(hudObjects);
 
     // UpgradeScreen overlay: tell it to use uiCam (ignore from main)
     this.upgradeScreen.setMainCamera(this.cameras.main);
+    this.minimap.setMainCamera(this.cameras.main);
 
     // Initial spawn position set by PlayerStation constructor via PLAYER_SPAWN_X/Y
 
@@ -251,6 +255,7 @@ export class GameScene extends Phaser.Scene {
 
     // HUD + visuals
     this.hud.update();
+    this.minimap.update(this.player.x, this.player.y, delta);
     updateStarfield(this.starfieldLayers, this.cameras.main);
     this.gravity.renderDangerZones(this.player.x, this.player.y, this.player.thrustPower);
     this.updateGravityIndicator();
@@ -305,6 +310,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onBodyDestroyed(tracked: TrackedBody): void {
+    this.minimap.addGhost(tracked.gravityBody.x, tracked.gravityBody.y, tracked.spaceObj.config.color);
     this.gravity.removeBody(tracked.gravityBody);
     tracked.rendered.graphics.destroy();
     tracked.rendered.label.destroy();
