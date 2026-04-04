@@ -25,11 +25,11 @@ const iceColors = [0xaaccee, 0x88aacc, 0xccddff];
 export const ZONES: ZoneDefinition[] = [
   {
     name: "Near-Earth Orbit",
-    minDistance: 0,
-    maxDistance: 8_000,
+    minDistance: 95_000,
+    maxDistance: 115_000,
     maxObjects: 40,
     cullBelowPlayerRatio: 0.05,
-    activationRange: 3_000,
+    activationRange: 15_000,
     spawnTable: [
       {
         weight: 5, minTier: 1,
@@ -69,11 +69,11 @@ export const ZONES: ZoneDefinition[] = [
   },
   {
     name: "Inner Solar System",
-    minDistance: 8_000,
-    maxDistance: 28_000,
+    minDistance: 70_000,
+    maxDistance: 95_000,
     maxObjects: 30,
     cullBelowPlayerRatio: 0.03,
-    activationRange: 5_000,
+    activationRange: 15_000,
     spawnTable: [
       {
         weight: 6, minTier: 1,
@@ -101,11 +101,11 @@ export const ZONES: ZoneDefinition[] = [
   },
   {
     name: "Asteroid Belt",
-    minDistance: 48_000,
-    maxDistance: 72_000,
+    minDistance: 125_000,
+    maxDistance: 145_000,
     maxObjects: 80,
     cullBelowPlayerRatio: 0.02,
-    activationRange: 10_000,
+    activationRange: 15_000,
     spawnTable: [
       {
         weight: 10, minTier: 2,
@@ -133,8 +133,8 @@ export const ZONES: ZoneDefinition[] = [
   },
   {
     name: "Outer Solar System",
-    minDistance: 95_000,
-    maxDistance: 200_000,
+    minDistance: 155_000,
+    maxDistance: 195_000,
     maxObjects: 25,
     cullBelowPlayerRatio: 0.01,
     activationRange: 20_000,
@@ -154,11 +154,11 @@ export const ZONES: ZoneDefinition[] = [
   },
   {
     name: "Kuiper Belt",
-    minDistance: 200_000,
-    maxDistance: 240_000,
+    minDistance: 195_000,
+    maxDistance: 200_000,
     maxObjects: 20,
     cullBelowPlayerRatio: 0.005,
-    activationRange: 30_000,
+    activationRange: 20_000,
     spawnTable: [
       {
         weight: 5, minTier: 4,
