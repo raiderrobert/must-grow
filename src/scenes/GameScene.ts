@@ -142,11 +142,12 @@ export class GameScene extends Phaser.Scene {
       1 + Math.log2(1 + this.resources.totalMassEarned) * 0.3;
     this.player.setSize(baseSize * growthFactor);
 
-    // Continuous camera zoom tracks station growth
+    // Continuous camera zoom tracks station growth (delta-based, frame-rate independent)
     const targetZoom = Math.max(1 / growthFactor, 0.2);
     const currentZoom = this.cameras.main.zoom;
+    const lerpFactor = 1 - Math.exp(-1.5 * (delta / 1000));
     this.cameras.main.setZoom(
-      currentZoom + (targetZoom - currentZoom) * 0.02
+      currentZoom + (targetZoom - currentZoom) * lerpFactor
     );
 
     // 7. HUD
