@@ -12,6 +12,7 @@ export interface BodyDef {
   massYield: number;
   energyYield: number;
   visual: VisualPrimitive[];
+  orbitParent: string | null; // body this orbits, null = fixed (Sun)
 }
 
 export const BODY_DEFS: BodyDef[] = [
@@ -32,6 +33,7 @@ export const BODY_DEFS: BodyDef[] = [
       { type: "solidBody", color: 0xffdd00, alpha: 1.0 },
       { type: "brightCore", radiusMult: 0.5, alpha: 0.4 },
     ],
+    orbitParent: null,
   },
 
   // ── Earth ─────────────────────────────────────────────────────────
@@ -56,6 +58,7 @@ export const BODY_DEFS: BodyDef[] = [
       { type: "highlight", offsetX: 0, offsetY: 0, radiusMult: 1.0, alpha: 0.08 },
       { type: "outline", thicknessMult: 0.01, color: 0x4488cc, alpha: 0.3 },
     ],
+    orbitParent: "Sun",
   },
 
   // ── Mercury ───────────────────────────────────────────────────────
@@ -76,6 +79,7 @@ export const BODY_DEFS: BodyDef[] = [
       { type: "highlight", offsetX: -0.3, offsetY: -0.3, radiusMult: 0.5, alpha: 0.07 },
       { type: "outline", thicknessMult: 0.008, color: 0xffffff, alpha: 0.12 },
     ],
+    orbitParent: "Sun",
   },
 
   // ── Venus ─────────────────────────────────────────────────────────
@@ -99,6 +103,7 @@ export const BODY_DEFS: BodyDef[] = [
       { type: "highlight", offsetX: -0.3, offsetY: -0.3, radiusMult: 0.5, alpha: 0.07 },
       { type: "outline", thicknessMult: 0.008, color: 0xffffff, alpha: 0.12 },
     ],
+    orbitParent: "Sun",
   },
 
   // ── Mars ──────────────────────────────────────────────────────────
@@ -116,6 +121,7 @@ export const BODY_DEFS: BodyDef[] = [
       { type: "highlight", offsetX: -0.3, offsetY: -0.3, radiusMult: 0.5, alpha: 0.07 },
       { type: "outline", thicknessMult: 0.008, color: 0xffffff, alpha: 0.12 },
     ],
+    orbitParent: "Sun",
   },
 
   // ── Jupiter ───────────────────────────────────────────────────────
@@ -141,6 +147,7 @@ export const BODY_DEFS: BodyDef[] = [
       { type: "highlight", offsetX: -0.3, offsetY: -0.3, radiusMult: 0.5, alpha: 0.07 },
       { type: "outline", thicknessMult: 0.008, color: 0xffffff, alpha: 0.12 },
     ],
+    orbitParent: "Sun",
   },
 
   // ── Saturn ────────────────────────────────────────────────────────
@@ -165,6 +172,7 @@ export const BODY_DEFS: BodyDef[] = [
       { type: "highlight", offsetX: -0.3, offsetY: -0.3, radiusMult: 0.5, alpha: 0.07 },
       { type: "outline", thicknessMult: 0.008, color: 0xffffff, alpha: 0.12 },
     ],
+    orbitParent: "Sun",
   },
 
   // ── Uranus ────────────────────────────────────────────────────────
@@ -183,6 +191,7 @@ export const BODY_DEFS: BodyDef[] = [
       { type: "highlight", offsetX: -0.3, offsetY: -0.3, radiusMult: 0.5, alpha: 0.07 },
       { type: "outline", thicknessMult: 0.008, color: 0xffffff, alpha: 0.12 },
     ],
+    orbitParent: "Sun",
   },
 
   // ── Neptune ───────────────────────────────────────────────────────
@@ -202,5 +211,6 @@ export const BODY_DEFS: BodyDef[] = [
       { type: "highlight", offsetX: -0.3, offsetY: -0.3, radiusMult: 0.5, alpha: 0.07 },
       { type: "outline", thicknessMult: 0.008, color: 0xffffff, alpha: 0.12 },
     ],
+    orbitParent: "Sun",
   },
 ];
