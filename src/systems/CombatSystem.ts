@@ -42,6 +42,7 @@ export class CombatSystem {
   beamRange: number = 300;
   burstShotCount: number = 3;      // shots per manual burst activation
   burstCooldownMax: number = 800;  // ms before another burst allowed
+  debrisPickupRange: number = 150; // world pixels — debris pulled toward player within this radius
 
   debrisGroup!: Phaser.Physics.Arcade.Group;
 
@@ -307,12 +308,31 @@ export class CombatSystem {
     }
   }
 
+  private updateDebrisAttraction(): void {
+    for (const d of this.debrisList) {
+      if (!d.sprite.active) continue;
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x, this.player.y, d.sprite.x, d.sprite.y
+      );
+      if (dist < this.debrisPickupRange) {
+        const angle = Phaser.Math.Angle.Between(
+          d.sprite.x, d.sprite.y, this.player.x, this.player.y
+        );
+        // Accelerates as debris gets closer
+        const pullSpeed = 200 + (1 - dist / this.debrisPickupRange) * 400;
+        d.sprite.body!.velocity.x = Math.cos(angle) * pullSpeed;
+        d.sprite.body!.velocity.y = Math.sin(angle) * pullSpeed;
+      }
+    }
+  }
+
   update(delta: number, droneCount: number = 0): void {
     if (this.burstCooldown > 0) this.burstCooldown -= delta;
 
     this.updateAutoFire(delta);
     this.updateBurstQueue(delta);
     this.updateBiteDamage(delta);
+    this.updateDebrisAttraction();
     this.updateDroneSwarm(delta, droneCount);
 
     this.debrisList = this.debrisList.filter(d => d.sprite.active);
