@@ -13,6 +13,8 @@ export interface SpaceObjectConfig {
   chewClicks?: number; // clicks to consume via clamping (Tier 1)
   bindingMassThreshold?: number;
   healRate?: number;
+  /** Radius within which the player damages this object by proximity. 0 = laser only. */
+  biteRadius?: number;
 }
 
 export class SpaceObject {

@@ -128,6 +128,13 @@ export class ZoneManager {
     this.objectGroup.add(obj.sprite);
   }
 
+  /** Add a permanently-placed object (planet). Never culled by size. */
+  addFixedObject(obj: SpaceObject): void {
+    obj.sprite.setData("fixed", true);
+    this.objects.push(obj);
+    this.objectGroup.add(obj.sprite);
+  }
+
   getObjects(): SpaceObject[] {
     return this.objects.filter((o) => o.sprite.active);
   }

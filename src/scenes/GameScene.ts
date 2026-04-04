@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { WORLD_WIDTH, WORLD_HEIGHT, COLORS } from "@/constants";
+import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -12,6 +12,7 @@ import { UpgradeScreen } from "@/ui/UpgradeScreen";
 import { AudioManager } from "@/systems/AudioManager";
 import type { SpaceObject } from "@/entities/SpaceObject";
 import type { DangerLevel } from "@/systems/GravitySystem";
+import { PLANET_DEFS, createPlanet } from "@/entities/PlanetObject";
 
 const UPGRADE_MILESTONE = 30; // trigger upgrade screen every N mass
 
@@ -25,6 +26,7 @@ export class GameScene extends Phaser.Scene {
   upgradeScreen!: UpgradeScreen;
   audio!: AudioManager;
 
+  planets: SpaceObject[] = [];
   currentTier: number = 1;
   private nextMilestone: number = UPGRADE_MILESTONE;
   private isPaused: boolean = false;
@@ -59,6 +61,16 @@ export class GameScene extends Phaser.Scene {
 
     this.gravity.initGraphics(this);
     this.renderEarth();
+
+    // Place named planets as fixed world objects
+    for (const def of PLANET_DEFS) {
+      const planet = createPlanet(this, def);
+      this.planets.push(planet);
+      this.zones.addFixedObject(planet);
+      const px = WORLD_CENTER_X + Math.cos(def.angle) * def.distance;
+      const py = WORLD_CENTER_Y + Math.sin(def.angle) * def.distance;
+      this.gravity.addBody({ x: px, y: py, gravityMass: def.config.gravityMass });
+    }
 
     this.gravityIndicatorGraphics = this.add.graphics().setDepth(10);
     this.dangerVignette = this.add.graphics().setScrollFactor(0).setDepth(90);
