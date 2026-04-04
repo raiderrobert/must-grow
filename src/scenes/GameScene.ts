@@ -27,6 +27,8 @@ export class GameScene extends Phaser.Scene {
   private starfieldLayers!: Phaser.GameObjects.TileSprite[];
   private gravityIndicatorGraphics!: Phaser.GameObjects.Graphics;
   private dangerVignette!: Phaser.GameObjects.Graphics;
+  private earthObjects: Phaser.GameObjects.GameObject[] = [];
+  private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private collisionCooldowns: WeakSet<Phaser.Physics.Arcade.Sprite> = new WeakSet();
 
   constructor() {
@@ -107,6 +109,44 @@ export class GameScene extends Phaser.Scene {
 
     this.gravityIndicatorGraphics = this.add.graphics().setDepth(10);
     this.dangerVignette = this.add.graphics().setScrollFactor(0).setDepth(90);
+
+    // ---- Two-camera setup ----
+    // UI camera: fixed zoom=1, renders only HUD elements
+    const { width, height } = this.scale;
+    this.uiCam = this.cameras.add(0, 0, width, height);
+    this.uiCam.setZoom(1);
+    this.uiCam.transparent = true; // don't clear background
+
+    // World objects: UI camera must ignore all of these
+    const worldObjects: Phaser.GameObjects.GameObject[] = [
+      ...this.starfieldLayers,
+      ...this.earthObjects,
+      this.player.body,
+      this.gravityIndicatorGraphics,
+      ...(this.gravity.getGraphics() ? [this.gravity.getGraphics()!] : []),
+      ...(this.player.getParticleEmitter() ? [this.player.getParticleEmitter()!] : []),
+      ...this.combat.getWorldGraphics(),
+    ];
+    this.uiCam.ignore(worldObjects);
+    this.uiCam.ignore(this.zones.objectGroup);
+    this.uiCam.ignore(this.combat.debrisGroup);
+
+    // Auto-ignore future spawned world sprites (addCallback exists at runtime, not in TS types)
+    (this.zones.objectGroup as unknown as { addCallback: (item: Phaser.GameObjects.GameObject) => void }).addCallback =
+      (item) => this.uiCam.ignore(item);
+    (this.combat.debrisGroup as unknown as { addCallback: (item: Phaser.GameObjects.GameObject) => void }).addCallback =
+      (item) => this.uiCam.ignore(item);
+
+    // HUD objects: main camera must ignore all of these
+    const hudObjects: Phaser.GameObjects.GameObject[] = [
+      ...this.hud.getObjects(),
+      ...this.shop.getObjects(),
+      this.dangerVignette,
+    ];
+    this.cameras.main.ignore(hudObjects);
+
+    // Shop needs main camera reference to re-apply ignore after rebuild()
+    this.shop.setMainCamera(this.cameras.main);
   }
 
   update(_time: number, delta: number): void {
@@ -268,30 +308,27 @@ export class GameScene extends Phaser.Scene {
     const earthY = WORLD_HEIGHT / 2 + 600;
     const radius = 180;
     const g = this.add.graphics().setDepth(-3);
+    this.earthObjects.push(g);
 
-    // Atmosphere glow
     g.fillStyle(0x1a3a5c, 0.3);
     g.fillCircle(earthX, earthY, radius + 30);
-    // Ocean base
     g.fillStyle(0x1a4a8a, 0.9);
     g.fillCircle(earthX, earthY, radius);
-    // Land masses
     g.fillStyle(0x2d6e2d, 0.85);
     g.fillEllipse(earthX - 40, earthY - 30, 90, 70);
     g.fillEllipse(earthX + 50, earthY + 20, 70, 80);
     g.fillEllipse(earthX - 20, earthY + 50, 60, 40);
-    // Cloud layer
     g.fillStyle(0xffffff, 0.15);
     g.fillCircle(earthX, earthY, radius);
-    // Outline
     g.lineStyle(2, 0x4488cc, 0.4);
     g.strokeCircle(earthX, earthY, radius);
 
-    this.add.text(earthX, earthY + radius + 20, "Earth", {
+    const label = this.add.text(earthX, earthY + radius + 20, "Earth", {
       fontFamily: "monospace",
       fontSize: "14px",
       color: "#4488cc",
     }).setOrigin(0.5).setDepth(-3).setAlpha(0.6);
+    this.earthObjects.push(label);
   }
 
   private triggerEvolution(newTier: number): void {

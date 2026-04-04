@@ -70,6 +70,10 @@ export class CombatSystem {
 
   }
 
+  getWorldGraphics(): Phaser.GameObjects.Graphics[] {
+    return [this.beamGraphics, this.droneGraphics, this.droneBeamGraphics];
+  }
+
   setUpgrades(upgrades: UpgradeManager): void {
     this.upgrades = upgrades;
   }

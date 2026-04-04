@@ -26,8 +26,10 @@ export class UpgradeShop {
   private combat: CombatSystem | null = null;
   private audio: AudioManager | null = null;
   private container: Phaser.GameObjects.Container;
+  private toggleBtn!: Phaser.GameObjects.Text;
   private isOpen: boolean = false;
   private rows: Phaser.GameObjects.Container[] = [];
+  private mainCam: Phaser.Cameras.Scene2D.Camera | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -47,7 +49,7 @@ export class UpgradeShop {
     this.container.setVisible(false);
 
     // Toggle button
-    scene.add
+    this.toggleBtn = scene.add
       .text(scene.scale.width - 100, 20, "[UPGRADES]", {
         fontFamily: "monospace",
         fontSize: "13px",
@@ -61,6 +63,16 @@ export class UpgradeShop {
         this.container.setVisible(this.isOpen);
         if (this.isOpen) this.rebuild();
       });
+  }
+
+  /** Static HUD objects (toggle button + panel container). */
+  getObjects(): Phaser.GameObjects.GameObject[] {
+    return [this.toggleBtn, this.container];
+  }
+
+  /** Store the main camera so rebuild() can re-apply ignore for new child objects. */
+  setMainCamera(cam: Phaser.Cameras.Scene2D.Camera): void {
+    this.mainCam = cam;
   }
 
   toggle(): void {
@@ -144,6 +156,11 @@ export class UpgradeShop {
     }
 
     bg.height = yOffset + 10;
+
+    // Re-apply camera ignore for any new children added to the container
+    if (this.mainCam) {
+      this.mainCam.ignore(this.container);
+    }
   }
 
   private createRow(

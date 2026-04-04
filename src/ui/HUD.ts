@@ -14,8 +14,10 @@ export class HUD {
   private energyText!: Phaser.GameObjects.Text;
   private massText!: Phaser.GameObjects.Text;
   private tierText!: Phaser.GameObjects.Text;
-  private generatorButton!: GeneratorButton;
-  private powerDeadOverlay?: Phaser.GameObjects.Rectangle;
+  private powerDeadOverlay!: Phaser.GameObjects.Rectangle;
+
+  // All HUD game objects — populated during construction so cameras can ignore them
+  private objects: Phaser.GameObjects.GameObject[] = [];
 
   constructor(
     scene: Phaser.Scene,
@@ -28,15 +30,14 @@ export class HUD {
     this.createEnergyBar();
     this.createMassCounter();
     this.createTierIndicator();
-    this.generatorButton = new GeneratorButton(
-      scene,
-      80,
-      scene.scale.height - 40
-    );
-    if (audio) {
-      this.generatorButton.setAudio(audio);
+    this.createPowerDeadOverlay();
 
-      // Mute button
+    // Generator hint label (display-only)
+    const genBtn = new GeneratorButton(scene, 80, scene.scale.height - 40);
+    this.objects.push(genBtn.getContainer());
+    if (audio) genBtn.setAudio(audio);
+
+    if (audio) {
       const muteBtn = scene.add
         .text(scene.scale.width - 40, scene.scale.height - 40, "🔊", {
           fontFamily: "monospace",
@@ -45,14 +46,14 @@ export class HUD {
         .setScrollFactor(0)
         .setDepth(100)
         .setInteractive({ useHandCursor: true });
-
       muteBtn.on("pointerdown", () => {
         const muted = audio.toggleMute();
         muteBtn.setText(muted ? "🔇" : "🔊");
       });
+      this.objects.push(muteBtn);
     }
 
-    scene.add
+    const hint = scene.add
       .text(
         scene.scale.width / 2,
         scene.scale.height - 16,
@@ -63,6 +64,12 @@ export class HUD {
       .setScrollFactor(0)
       .setDepth(100)
       .setAlpha(0.7);
+    this.objects.push(hint);
+  }
+
+  /** All Phaser GameObjects owned by the HUD — pass to camera.ignore(). */
+  getObjects(): Phaser.GameObjects.GameObject[] {
+    return this.objects;
   }
 
   private createEnergyBar(): void {
@@ -72,22 +79,18 @@ export class HUD {
     const height = 16;
 
     this.energyBarBg = this.scene.add
-      .rectangle(
-        x + width / 2,
-        y + height / 2,
-        width,
-        height,
-        0x333333
-      )
+      .rectangle(x + width / 2, y + height / 2, width, height, 0x333333)
       .setStrokeStyle(1, COLORS.energy, 0.5)
       .setScrollFactor(0)
       .setDepth(100);
+    this.objects.push(this.energyBarBg);
 
     this.energyBarFill = this.scene.add
       .rectangle(x + 1, y + 1, 0, height - 2, COLORS.energy)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(101);
+    this.objects.push(this.energyBarFill);
 
     this.energyText = this.scene.add
       .text(x + width + 10, y, "", {
@@ -97,6 +100,7 @@ export class HUD {
       })
       .setScrollFactor(0)
       .setDepth(100);
+    this.objects.push(this.energyText);
   }
 
   private createMassCounter(): void {
@@ -108,6 +112,7 @@ export class HUD {
       })
       .setScrollFactor(0)
       .setDepth(100);
+    this.objects.push(this.massText);
   }
 
   private createTierIndicator(): void {
@@ -119,6 +124,24 @@ export class HUD {
       })
       .setScrollFactor(0)
       .setDepth(100);
+    this.objects.push(this.tierText);
+  }
+
+  private createPowerDeadOverlay(): void {
+    // Pre-created hidden; toggled in update() — always part of getObjects()
+    this.powerDeadOverlay = this.scene.add
+      .rectangle(
+        this.scene.scale.width / 2,
+        this.scene.scale.height / 2,
+        this.scene.scale.width,
+        this.scene.scale.height,
+        0xff0000,
+        0.1
+      )
+      .setScrollFactor(0)
+      .setDepth(50)
+      .setVisible(false);
+    this.objects.push(this.powerDeadOverlay);
   }
 
   update(): void {
@@ -128,9 +151,7 @@ export class HUD {
 
     if (ratio < 0.2) {
       const flash = Math.sin(this.scene.time.now / 200) > 0;
-      this.energyBarFill.setFillStyle(
-        flash ? COLORS.dangerRed : COLORS.energy
-      );
+      this.energyBarFill.setFillStyle(flash ? COLORS.dangerRed : COLORS.energy);
     } else {
       this.energyBarFill.setFillStyle(COLORS.energy);
     }
@@ -146,24 +167,6 @@ export class HUD {
     const tier = getTierForMass(this.resources.totalMassEarned);
     this.tierText.setText(`Tier ${tier}: ${getTierName(tier)}`);
 
-    // Power dead overlay
-    if (this.resources.isPowerDead) {
-      if (!this.powerDeadOverlay) {
-        this.powerDeadOverlay = this.scene.add
-          .rectangle(
-            this.scene.scale.width / 2,
-            this.scene.scale.height / 2,
-            this.scene.scale.width,
-            this.scene.scale.height,
-            0xff0000,
-            0.1
-          )
-          .setScrollFactor(0)
-          .setDepth(50);
-      }
-    } else if (this.powerDeadOverlay) {
-      this.powerDeadOverlay.destroy();
-      this.powerDeadOverlay = undefined;
-    }
+    this.powerDeadOverlay.setVisible(this.resources.isPowerDead);
   }
 }

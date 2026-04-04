@@ -93,6 +93,10 @@ export class GravitySystem {
     this.graphics.setDepth(-5);
   }
 
+  getGraphics(): Phaser.GameObjects.Graphics | undefined {
+    return this.graphics;
+  }
+
   /** Returns true if the player should die from gravity (too close to a deadly body). */
   isInLethalZone(
     playerX: number,

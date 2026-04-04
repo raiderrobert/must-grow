@@ -3,6 +3,8 @@ import { COLORS } from "@/constants";
 
 /** Displays a hint showing the power key — no longer interactive (use K or gamepad B). */
 export class GeneratorButton {
+  private container: Phaser.GameObjects.Container;
+
   constructor(scene: Phaser.Scene, x: number, y: number) {
     const bg = scene.add
       .rectangle(0, 0, 130, 40, COLORS.energy, 0.15)
@@ -17,9 +19,13 @@ export class GeneratorButton {
       .setOrigin(0.5)
       .setAlpha(0.7);
 
-    const container = scene.add.container(x, y, [bg, label]);
-    container.setScrollFactor(0);
-    container.setDepth(100);
+    this.container = scene.add.container(x, y, [bg, label]);
+    this.container.setScrollFactor(0);
+    this.container.setDepth(100);
+  }
+
+  getContainer(): Phaser.GameObjects.Container {
+    return this.container;
   }
 
   // No-op — kept so HUD constructor call is unchanged

@@ -243,6 +243,10 @@ export class PlayerStation {
     return keyJustDown || padJustDown;
   }
 
+  getParticleEmitter(): Phaser.GameObjects.Particles.ParticleEmitter | undefined {
+    return this.thrustEmitter;
+  }
+
   applyGravity(gx: number, gy: number): void {
     const body = this.body.body as Phaser.Physics.Arcade.Body;
     body.velocity.x += gx;
