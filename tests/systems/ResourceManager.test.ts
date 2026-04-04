@@ -80,11 +80,24 @@ describe("ResourceManager", () => {
   });
 
   describe("fusion reactor mass drain", () => {
-    it("massDrainRate reduces mass over time", () => {
+    it("massDrainRate reduces mass and generates energy when fuel available", () => {
       rm.addMass(100);
-      rm.massDrainRate = 5; // 5 mass/sec
+      rm.drainEnergy(STARTING_ENERGY); // start at 0 energy
+      rm.massDrainRate = 5;
+      rm.massFuelGenerationRate = 8;
       rm.updateEnergy(1000); // 1 second
       expect(rm.mass).toBeCloseTo(95);
+      expect(rm.energy).toBeCloseTo(8);
+    });
+
+    it("produces no energy when mass is insufficient", () => {
+      rm.drainEnergy(STARTING_ENERGY);
+      rm.addMass(2);
+      rm.massDrainRate = 5;
+      rm.massFuelGenerationRate = 8;
+      rm.updateEnergy(1000); // 5 mass needed, only 2 available
+      expect(rm.energy).toBeCloseTo(0); // no reactor energy
+      expect(rm.mass).toBeGreaterThanOrEqual(0);
     });
 
     it("mass drain stops when mass is insufficient", () => {

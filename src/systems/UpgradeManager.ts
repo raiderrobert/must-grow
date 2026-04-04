@@ -78,12 +78,13 @@ export class UpgradeManager {
     capacity += this.getLevel("darkEnergyMatrix") * 1000;
     resources.batteryCapacity = capacity;
 
-    // Passive generation
-    let genRate = 0;
-    genRate += this.getLevel("solarPanels") * 1.5;
-    genRate += this.getLevel("fusionReactor") * 8;
-    genRate += this.getLevel("stellarHarvester") * 25;
-    resources.generationRate = genRate;
+    // Always-on generation (no mass cost)
+    resources.generationRate =
+      this.getLevel("solarPanels") * 1.5 +
+      this.getLevel("stellarHarvester") * 25;
+
+    // Reactor generation — gated on mass fuel
+    resources.massFuelGenerationRate = this.getLevel("fusionReactor") * 8;
     resources.massDrainRate = this.getLevel("fusionReactor") * 0.5;
 
     // Drain from automation

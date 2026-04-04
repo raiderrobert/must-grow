@@ -12,9 +12,10 @@ export class ResourceManager {
   energy: number = STARTING_ENERGY;
   batteryCapacity: number = STARTING_BATTERY_CAPACITY;
 
-  generationRate: number = 0; // energy per second from passive sources
-  drainRate: number = 0; // energy per second consumed by active systems
-  massDrainRate: number = 0; // mass consumed per second (fusion reactor)
+  generationRate: number = 0;     // energy/sec from always-on sources (solar panels, stellar harvester)
+  massFuelGenerationRate: number = 0; // energy/sec from reactor — only when mass fuel is available
+  drainRate: number = 0;          // energy/sec consumed by active systems
+  massDrainRate: number = 0;      // mass consumed per second (fusion reactor fuel)
 
   manualGenerateAmount: number = ENERGY_PER_MANUAL_CLICK;
 
@@ -50,12 +51,14 @@ export class ResourceManager {
     } else {
       this.drainEnergy(Math.abs(net));
     }
-    if (this.massDrainRate > 0) {
+    // Reactor: only generates energy when mass fuel is available
+    if (this.massDrainRate > 0 && this.massFuelGenerationRate > 0) {
       const massCost = this.massDrainRate * deltaSec;
       if (this.mass >= massCost) {
         this.mass -= massCost;
+        this.addEnergy(this.massFuelGenerationRate * deltaSec);
       }
-      // If not enough mass, reactor just doesn't feed — no energy added from it
+      // No mass → no reactor energy
     }
   }
 
