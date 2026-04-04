@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, ZOOM_START, ZOOM_MIN, PLAYER_SPAWN_X, PLAYER_SPAWN_Y, ORBIT_SPEED_SCALE } from "@/constants";
+import { COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, GRAVITY_CONSTANT, ZOOM_START, ZOOM_MIN, ORBIT_SPEED_SCALE } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -95,6 +95,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.orbitStates = createOrbitStates(BODY_DEFS);
+
+    // Spawn player near Earth's actual starting position with orbital velocity
+    this.spawnNearEarth();
+
     this.zones.populate(this.player.x, this.player.y, 1);
 
     this.gravityIndicatorGraphics = this.add.graphics().setDepth(10);
@@ -174,7 +178,7 @@ export class GameScene extends Phaser.Scene {
     this.upgradeScreen.setMainCamera(this.cameras.main);
     this.minimap.setMainCamera(this.cameras.main);
 
-    // Initial spawn position set by PlayerStation constructor via PLAYER_SPAWN_X/Y
+    // (player position set dynamically in spawnNearEarth below)
 
     // Starting zoom: keeps player ~6px on screen, Earth arc visible at bottom
     this.cameras.main.setZoom(ZOOM_START);
@@ -348,12 +352,28 @@ export class GameScene extends Phaser.Scene {
     this.audio.music.onTierChange(newTier);
   }
 
+  private spawnNearEarth(): void {
+    const earthBody = this.trackedBodies.find(tb => tb.name === "Earth");
+    if (earthBody) {
+      const spawnX = earthBody.gravityBody.x;
+      const spawnY = earthBody.gravityBody.y - 1_500;
+      this.player.body.setPosition(spawnX, spawnY);
+      const spawnDist = 1_500 + (earthBody.gravityBody.killRadius ?? 3_000);
+      const orbitalSpeed = Math.sqrt(
+        GRAVITY_CONSTANT * earthBody.gravityBody.gravityMass * GRAVITY_SCALE / spawnDist
+      );
+      this.player.body.setVelocity(orbitalSpeed, 0);
+    } else {
+      this.player.body.setPosition(WORLD_CENTER_X, WORLD_CENTER_Y);
+      this.player.body.setVelocity(0, 0);
+    }
+  }
+
   private handleDeath(): void {
     this.audio.play("sfx_game_over");
     this.cameras.main.flash(500, 255, 100, 100);
     this.resources.energy = this.resources.batteryCapacity;
-    this.player.body.setPosition(PLAYER_SPAWN_X, PLAYER_SPAWN_Y);
-    this.player.body.setVelocity(0, 0);
+    this.spawnNearEarth();
   }
 
   private onBodyDestroyed(tracked: TrackedBody): void {
