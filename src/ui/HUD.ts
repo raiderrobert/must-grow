@@ -55,7 +55,7 @@ export class HUD {
       .text(
         20,
         scene.scale.height - 16,
-        "WASD · SPACE burst · SHIFT boost",
+        "WASD / stick move  ·  SPACE / A burst  ·  SHIFT / LB boost",
         { fontFamily: "monospace", fontSize: "11px", color: "#444" }
       )
       .setOrigin(0, 1)

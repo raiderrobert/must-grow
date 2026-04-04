@@ -21,13 +21,11 @@ export class PlayerStation {
   };
   private attackKeys!: Phaser.Input.Keyboard.Key[];
   private boostKey!: Phaser.Input.Keyboard.Key;
-  private upgradeKey!: Phaser.Input.Keyboard.Key;
   private pad: Phaser.Input.Gamepad.Gamepad | null = null;
   private thrustEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
 
   // One-shot gamepad flags (set by event, cleared by consume methods)
   private padAttackJust: boolean = false;
-  private padUpgradeJust: boolean = false;
 
   isLocked: boolean = false;
   isBoosting: boolean = false;
@@ -74,7 +72,6 @@ export class PlayerStation {
       scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.J),
     ];
     this.boostKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
-    this.upgradeKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
 
     // Gamepad support
     if (scene.input.gamepad) {
@@ -86,7 +83,6 @@ export class PlayerStation {
         "down",
         (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
           if (button.index === 0) this.padAttackJust = true;
-          if (button.index === 9) this.padUpgradeJust = true;
         }
       );
     }
@@ -213,13 +209,6 @@ export class PlayerStation {
   }
 
   /** Returns true if E or gamepad Start was just pressed. Clears the flag. */
-  consumeUpgradeToggle(): boolean {
-    const keyJustDown = Phaser.Input.Keyboard.JustDown(this.upgradeKey);
-    const padJustDown = this.padUpgradeJust;
-    this.padUpgradeJust = false;
-    return keyJustDown || padJustDown;
-  }
-
   getParticleEmitter(): Phaser.GameObjects.Particles.ParticleEmitter | undefined {
     return this.thrustEmitter;
   }
