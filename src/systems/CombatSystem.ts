@@ -42,7 +42,7 @@ export class CombatSystem {
   beamRange: number = 300;
   burstShotCount: number = 3;      // shots per manual burst activation
   burstCooldownMax: number = 800;  // ms before another burst allowed
-  debrisPickupRange: number = 150; // world pixels — debris pulled toward player within this radius
+  debrisPickupRange: number = 80;  // world pixels — tighter, snappier collection
 
   debrisGroup!: Phaser.Physics.Arcade.Group;
 
@@ -280,8 +280,8 @@ export class CombatSystem {
         const angle = Phaser.Math.Angle.Between(
           d.sprite.x, d.sprite.y, this.player.x, this.player.y
         );
-        // Accelerates as debris gets closer
-        const pullSpeed = 200 + (1 - dist / this.debrisPickupRange) * 400;
+        // Fast vacuum pull — snaps debris in within 1-2 frames
+        const pullSpeed = 600 + (1 - dist / this.debrisPickupRange) * 1200;
         d.sprite.body!.velocity.x = Math.cos(angle) * pullSpeed;
         d.sprite.body!.velocity.y = Math.sin(angle) * pullSpeed;
       }
