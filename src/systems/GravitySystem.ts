@@ -123,6 +123,31 @@ export class GravitySystem {
     return false;
   }
 
+  /**
+   * Returns 0 (fully safe) to 1 (at kill zone surface) based on proximity
+   * to the nearest body that has an explicit killRadius.
+   * Warning band starts at killRadius * warningBandMult outside the kill surface.
+   */
+  getApproachFactor(
+    playerX: number,
+    playerY: number,
+    warningBandMult: number = 1.2
+  ): number {
+    let maxFactor = 0;
+    for (const body of this.bodies) {
+      if (body.killRadius === undefined) continue;
+      const dx = body.x - playerX;
+      const dy = body.y - playerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const warningRadius = body.killRadius * warningBandMult;
+      if (dist < warningRadius) {
+        const factor = (warningRadius - dist) / (warningRadius - body.killRadius);
+        maxFactor = Math.max(maxFactor, Math.min(1, Math.max(0, factor)));
+      }
+    }
+    return maxFactor;
+  }
+
   renderDangerZones(
     playerX: number,
     playerY: number,

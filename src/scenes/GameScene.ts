@@ -12,7 +12,7 @@ import { UpgradeScreen } from "@/ui/UpgradeScreen";
 import { AudioManager } from "@/systems/AudioManager";
 import { InputManager } from "@/systems/InputManager";
 import type { SpaceObject } from "@/entities/SpaceObject";
-import type { DangerLevel } from "@/systems/GravitySystem";
+
 import { PLANET_DEFS, createPlanet } from "@/entities/PlanetObject";
 
 export class GameScene extends Phaser.Scene {
@@ -191,6 +191,13 @@ export class GameScene extends Phaser.Scene {
 
     // Energy passive regen
     this.resources.update(delta);
+
+    // Atmosphere energy drain — ramps up quadratically as you approach kill zone
+    const approachFactor = this.gravity.getApproachFactor(this.player.x, this.player.y);
+    if (approachFactor > 0) {
+      const drainPerSec = approachFactor * approachFactor * 40; // 0 at outer edge, 40/sec at surface
+      this.resources.energy = Math.max(0, this.resources.energy - drainPerSec * (delta / 1000));
+    }
 
     // Tier evolution
     const newTier = getTierForMass(this.resources.totalMassEarned);
@@ -396,22 +403,23 @@ export class GameScene extends Phaser.Scene {
   private updateDangerVignette(): void {
     this.dangerVignette.clear();
 
-    let worstLevel: DangerLevel = "safe";
-    for (const body of this.gravity.getBodies()) {
-      const level = this.gravity.getDangerLevel(body, this.player.x, this.player.y, this.player.thrustPower);
-      if (level === "deadly") { worstLevel = "deadly"; break; }
-      if (level === "warning") worstLevel = "warning";
-    }
-    if (worstLevel === "safe") return;
+    const approachFactor = this.gravity.getApproachFactor(this.player.x, this.player.y);
+    if (approachFactor <= 0) return;
+
+    // Pulse rate speeds up as you get closer: 1200ms at outer edge → 80ms at surface
+    const pulseMs = 1200 - approachFactor * 1120;
+    const pulse = (Math.sin(this.time.now / pulseMs) + 1) / 2;
+
+    // Color shifts from yellow → orange → red as factor increases
+    const color = approachFactor < 0.5 ? 0xffaa00 : 0xff2200;
+
+    // Intensity also ramps up
+    const baseAlpha = 0.05 + approachFactor * 0.25;
+    const alpha = baseAlpha + pulse * (0.04 + approachFactor * 0.14);
 
     const w = this.scale.width;
     const h = this.scale.height;
-    const pulse = (Math.sin(this.time.now / (worstLevel === "deadly" ? 150 : 400)) + 1) / 2;
-    const baseAlpha = worstLevel === "deadly" ? 0.25 : 0.10;
-    const alpha = baseAlpha + pulse * (worstLevel === "deadly" ? 0.15 : 0.06);
-    const color = worstLevel === "deadly" ? 0xff2222 : 0xff8800;
-
-    const edgeSize = Math.floor(Math.min(w, h) * 0.12);
+    const edgeSize = Math.floor(Math.min(w, h) * (0.08 + approachFactor * 0.1));
     this.dangerVignette.fillStyle(color, alpha);
     this.dangerVignette.fillRect(0, 0, w, edgeSize);
     this.dangerVignette.fillRect(0, h - edgeSize, w, edgeSize);
