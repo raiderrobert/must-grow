@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, ZOOM_START, ZOOM_MIN, PLAYER_SPAWN_X, PLAYER_SPAWN_Y, DEBUG_KILL_ZONES } from "@/constants";
+import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, ZOOM_START, ZOOM_MIN, PLAYER_SPAWN_X, PLAYER_SPAWN_Y } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -11,9 +11,18 @@ import { HUD } from "@/ui/HUD";
 import { UpgradeScreen } from "@/ui/UpgradeScreen";
 import { AudioManager } from "@/systems/AudioManager";
 import { InputManager } from "@/systems/InputManager";
-import type { SpaceObject } from "@/entities/SpaceObject";
+import { SpaceObject } from "@/entities/SpaceObject";
 
-import { PLANET_DEFS, createPlanet } from "@/entities/PlanetObject";
+import { BODY_DEFS } from "@/data/bodies";
+import { renderBody, type RenderedBody } from "@/entities/BodyRenderer";
+import type { GravityBody } from "@/systems/GravitySystem";
+
+interface TrackedBody {
+  name: string;
+  spaceObj: SpaceObject;
+  rendered: RenderedBody;
+  gravityBody: GravityBody;
+}
 
 export class GameScene extends Phaser.Scene {
   player!: PlayerStation;
@@ -26,7 +35,7 @@ export class GameScene extends Phaser.Scene {
   audio!: AudioManager;
   inputManager!: InputManager;
 
-  planets: SpaceObject[] = [];
+  private trackedBodies: TrackedBody[] = [];
   currentTier: number = 1;
   private upgradeCount: number = 0;
   private nextMilestone: number = 50;
@@ -34,7 +43,6 @@ export class GameScene extends Phaser.Scene {
   private isPaused: boolean = false;
 
   private starfieldLayers!: Phaser.GameObjects.TileSprite[];
-  private earthObjects: Phaser.GameObjects.GameObject[] = [];
   private gravityIndicatorGraphics!: Phaser.GameObjects.Graphics;
   private dangerVignette!: Phaser.GameObjects.Graphics;
   private collisionCooldowns: WeakSet<Phaser.Physics.Arcade.Sprite> = new WeakSet();
@@ -52,29 +60,35 @@ export class GameScene extends Phaser.Scene {
 
     this.resources = new ResourceManager();
     this.gravity = new GravitySystem();
-    this.zones = new ZoneManager(this);
+    this.zones = new ZoneManager(this, this.gravity);
     this.player = new PlayerStation(this);
 
-    this.zones.populate(this.player.x, this.player.y, 1);
-
-    // Earth gravity body — killRadius at outer atmosphere where player naturally drifts in
-    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y + 3_200, gravityMass: 500, killRadius: 3_000 });
-    // Sun far north
-    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y - 240_000, gravityMass: 50_000 });
-
     this.gravity.initGraphics(this);
-    this.renderEarth();
-    this.renderSun();
 
-    // Place named planets as fixed world objects
-    for (const def of PLANET_DEFS) {
-      const planet = createPlanet(this, def);
-      this.planets.push(planet);
-      this.zones.addFixedObject(planet);
-      const px = WORLD_CENTER_X + Math.cos(def.angle) * def.distance;
-      const py = WORLD_CENTER_Y + Math.sin(def.angle) * def.distance;
-      this.gravity.addBody({ x: px, y: py, gravityMass: def.config.gravityMass });
+    // Create all 9 celestial bodies from unified definitions
+    for (const def of BODY_DEFS) {
+      const x = WORLD_CENTER_X + Math.cos(def.angle) * def.distance;
+      const y = WORLD_CENTER_Y + Math.sin(def.angle) * def.distance;
+
+      const rendered = renderBody(this, x, y, def.visualRadius, def.killRadius, def.name, def.color, def.visual, -3);
+
+      const proxyRadius = Math.min(def.visualRadius, 1500);
+      const spaceObj = new SpaceObject(this, {
+        x, y, size: proxyRadius,
+        health: def.health, massYield: def.massYield, energyYield: def.energyYield,
+        gravityMass: def.gravityMass, color: def.color, name: def.name,
+      });
+      spaceObj.sprite.setVisible(false);
+      spaceObj.sprite.setVelocity(0, 0);
+      this.zones.addFixedObject(spaceObj);
+
+      const gravityBody: GravityBody = { x, y, gravityMass: def.gravityMass, killRadius: def.killRadius };
+      this.gravity.addBody(gravityBody);
+
+      this.trackedBodies.push({ name: def.name, spaceObj, rendered, gravityBody });
     }
+
+    this.zones.populate(this.player.x, this.player.y, 1);
 
     this.gravityIndicatorGraphics = this.add.graphics().setDepth(10);
     this.dangerVignette = this.add.graphics().setScrollFactor(0).setDepth(90);
@@ -121,7 +135,11 @@ export class GameScene extends Phaser.Scene {
     // uiCam ignores all world objects
     const worldObjects: Phaser.GameObjects.GameObject[] = [
       ...this.starfieldLayers,
-      ...this.earthObjects,
+      ...this.trackedBodies.flatMap(tb => [
+        tb.rendered.graphics,
+        tb.rendered.label,
+        ...(tb.rendered.debugRing ? [tb.rendered.debugRing] : []),
+      ]),
       this.player.body,
       this.gravityIndicatorGraphics,
       ...(this.gravity.getGraphics() ? [this.gravity.getGraphics()!] : []),
@@ -184,6 +202,14 @@ export class GameScene extends Phaser.Scene {
 
     // Combat (auto-fire always on)
     this.combat.update(delta, 0);
+
+    // Check if any tracked bodies were destroyed
+    for (let i = this.trackedBodies.length - 1; i >= 0; i--) {
+      const tb = this.trackedBodies[i];
+      if (!tb.spaceObj.sprite.active) {
+        this.onBodyDestroyed(tb);
+      }
+    }
 
     // Zone spawning
     const tier = getTierForMass(this.resources.totalMassEarned);
@@ -278,6 +304,17 @@ export class GameScene extends Phaser.Scene {
     this.player.body.setVelocity(0, 0);
   }
 
+  private onBodyDestroyed(tracked: TrackedBody): void {
+    this.gravity.removeBody(tracked.gravityBody);
+    tracked.rendered.graphics.destroy();
+    tracked.rendered.label.destroy();
+    tracked.rendered.debugRing?.destroy();
+    const idx = this.trackedBodies.indexOf(tracked);
+    if (idx !== -1) this.trackedBodies.splice(idx, 1);
+    const shakeIntensity = Math.min(0.02, 0.005 + tracked.spaceObj.config.size / 100_000);
+    this.cameras.main.shake(1000, shakeIntensity);
+  }
+
   onCollision(obj: SpaceObject): void {
     if (this.collisionCooldowns.has(obj.sprite)) return;
     this.collisionCooldowns.add(obj.sprite);
@@ -298,68 +335,6 @@ export class GameScene extends Phaser.Scene {
     const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
     this.player.body.body!.velocity.x += (dx / dist) * 200;
     this.player.body.body!.velocity.y += (dy / dist) * 200;
-  }
-
-  private renderEarth(): void {
-    const earthX = WORLD_CENTER_X;
-    const earthY = WORLD_CENTER_Y + 3_200;
-    const radius = 3_000;
-    const g = this.add.graphics().setDepth(-3);
-    this.earthObjects.push(g);
-
-    g.fillStyle(0x1a3a5c, 0.15);
-    g.fillCircle(earthX, earthY, radius + 600);
-    g.fillStyle(0x2255aa, 0.25);
-    g.fillCircle(earthX, earthY, radius + 200);
-    g.fillStyle(0x1a4a8a, 0.95);
-    g.fillCircle(earthX, earthY, radius);
-    g.fillStyle(0x2d6e2d, 0.85);
-    g.fillEllipse(earthX - 500, earthY - 400, 1200, 900);
-    g.fillEllipse(earthX + 700, earthY + 300, 900, 1100);
-    g.fillEllipse(earthX - 200, earthY + 700, 800, 500);
-    g.fillEllipse(earthX + 300, earthY - 800, 600, 400);
-    g.fillStyle(0xffffff, 0.08);
-    g.fillCircle(earthX, earthY, radius);
-    g.lineStyle(30, 0x4488cc, 0.3);
-    g.strokeCircle(earthX, earthY, radius);
-
-    // Debug: thin red ring at exact kill boundary (toggle DEBUG_KILL_ZONES in constants.ts)
-    if (DEBUG_KILL_ZONES) {
-      const deathRing = this.add.graphics().setDepth(10);
-      this.earthObjects.push(deathRing);
-      deathRing.lineStyle(8, 0xff0000, 1.0);
-      deathRing.strokeCircle(earthX, earthY, 3_000);
-    }
-
-    const label = this.add.text(earthX, earthY + radius + 400, "Earth", {
-      fontFamily: "monospace", fontSize: "48px", color: "#4488cc",
-    }).setOrigin(0.5).setDepth(-3).setAlpha(0.6).setScale(60);
-    this.earthObjects.push(label);
-  }
-
-  private renderSun(): void {
-    const sunX = WORLD_CENTER_X;
-    const sunY = WORLD_CENTER_Y - 240_000;
-    const radius = 25_000;
-    const g = this.add.graphics().setDepth(-4);
-    this.earthObjects.push(g); // tracked for uiCam ignore
-
-    // Corona layers
-    for (let i = 0; i < 4; i++) {
-      g.fillStyle(0xffaa00, 0.04 - i * 0.008);
-      g.fillCircle(sunX, sunY, radius * (1.4 + i * 0.3));
-    }
-    // Body
-    g.fillStyle(0xffdd00, 1.0);
-    g.fillCircle(sunX, sunY, radius);
-    // Bright core
-    g.fillStyle(0xffffff, 0.4);
-    g.fillCircle(sunX, sunY, radius * 0.5);
-
-    const sunLabel = this.add.text(sunX, sunY + radius + 2_000, "The Sun", {
-      fontFamily: "monospace", fontSize: "48px", color: "#ffdd00",
-    }).setOrigin(0.5).setDepth(-4).setAlpha(0.8).setScale(600);
-    this.earthObjects.push(sunLabel);
   }
 
   private updateGravityIndicator(): void {
