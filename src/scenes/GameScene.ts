@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, GRAVITY_CONSTANT, ZOOM_START, ZOOM_MIN, ORBIT_SPEED_SCALE } from "@/constants";
+import { COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, GRAVITY_CONSTANT, ZOOM_START, ZOOM_MIN, ORBIT_SPEED_SCALE, DEBRIS_ORBIT_SPEED_MULT } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -237,7 +237,7 @@ export class GameScene extends Phaser.Scene {
 
       const idealSpeed = Math.sqrt(
         GRAVITY_CONSTANT * dominant.gravityMass * GRAVITY_SCALE / dist
-      );
+      ) * DEBRIS_ORBIT_SPEED_MULT;
 
       const nx = dx / dist;
       const ny = dy / dist;
@@ -436,7 +436,7 @@ export class GameScene extends Phaser.Scene {
 
       const orbitalSpeed = Math.sqrt(
         GRAVITY_CONSTANT * bodyMass * GRAVITY_SCALE / dist
-      );
+      ) * DEBRIS_ORBIT_SPEED_MULT;
       const tangentAngle = angle + Math.PI / 2;
       const perturb = 0.85 + Math.random() * 0.3;
       const localVx = Math.cos(tangentAngle) * orbitalSpeed * perturb;

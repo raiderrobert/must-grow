@@ -58,6 +58,7 @@ export const SOLAR_DISTANCES = {
 
 export const GRAVITY_SCALE = 0.5; // increased for stickier orbits
 export const SOI_MULTIPLIER = 5;  // sphere of influence = killRadius * this
+export const DEBRIS_ORBIT_SPEED_MULT = 5; // debris orbits planets 5x faster than physics for visual appeal
 
 // Orbital physics
 export const ORBIT_SPEED_SCALE = 1.0; // global multiplier for planet orbit speeds
