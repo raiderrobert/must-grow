@@ -21,16 +21,6 @@ export const MASS_FROM_DESTROY_MULTIPLIER = 1.0;
 // Upgrades
 export const UPGRADE_COST_SCALING = 1.5;
 
-// Tiers
-export const TIER_THRESHOLDS = [0, 100, 500, 2000, 10000, 50000] as const;
-export const TIER_NAMES = [
-  "Satellite",
-  "Space Station",
-  "Mega Station",
-  "Planet Eater",
-  "Star Killer",
-] as const;
-
 // Visual
 export const COLORS = {
   station: 0x6c63ff,
