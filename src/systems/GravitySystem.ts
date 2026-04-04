@@ -105,14 +105,19 @@ export class GravitySystem {
     playerThrust: number
   ): boolean {
     for (const body of this.bodies) {
+      const dx = body.x - playerX;
+      const dy = body.y - playerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Explicit kill radius — pure distance check, no danger level gating
+      if (body.killRadius !== undefined) {
+        if (dist < body.killRadius) return true;
+        continue;
+      }
+
+      // Fallback: gravity-based calculation for bodies without explicit radius
       if (this.getDangerLevel(body, playerX, playerY, playerThrust) === "deadly") {
-        const dx = body.x - playerX;
-        const dy = body.y - playerY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const killRadius = body.killRadius ?? Math.sqrt(body.gravityMass) * 2;
-        if (dist < killRadius) {
-          return true;
-        }
+        if (dist < Math.sqrt(body.gravityMass) * 2) return true;
       }
     }
     return false;
