@@ -103,6 +103,19 @@ export class GameScene extends Phaser.Scene {
     // Now Earth is in its correct position — spawn player near it
     this.spawnNearEarth();
 
+    // Debris belts orbiting each planet
+    this.spawnDebrisBelt("Earth",   30, 500,   5_000);
+    this.spawnDebrisBelt("Mercury", 10, 200,   2_000);
+    this.spawnDebrisBelt("Venus",   15, 400,   3_000);
+    this.spawnDebrisBelt("Mars",    12, 300,   2_500);
+    this.spawnDebrisBelt("Jupiter", 25, 2_000, 15_000);
+    this.spawnDebrisBelt("Saturn",  20, 2_000, 12_000);
+    this.spawnDebrisBelt("Uranus",  10, 1_000, 6_000);
+    this.spawnDebrisBelt("Neptune", 10, 1_000, 5_000);
+
+    // Dense asteroid belt between Mars and Jupiter
+    this.spawnAsteroidRing(150, 125_000, 145_000);
+
     this.zones.populate(this.player.x, this.player.y, 1);
 
     this.gravityIndicatorGraphics = this.add.graphics().setDepth(10);
@@ -356,15 +369,112 @@ export class GameScene extends Phaser.Scene {
     this.audio.music.onTierChange(newTier);
   }
 
+  private getBodyVelocity(bodyName: string): { vx: number; vy: number } {
+    const orbitState = this.orbitStates.find(os => os.bodyName === bodyName);
+    if (!orbitState) return { vx: 0, vy: 0 };
+    const linearSpeed = orbitState.orbitSpeed * orbitState.distance * ORBIT_SPEED_SCALE;
+    const perpAngle = orbitState.currentAngle + Math.PI / 2;
+    return { vx: Math.cos(perpAngle) * linearSpeed, vy: Math.sin(perpAngle) * linearSpeed };
+  }
+
+  private spawnDebrisBelt(
+    bodyName: string,
+    count: number,
+    minAltitude: number,
+    maxAltitude: number
+  ): void {
+    const tracked = this.trackedBodies.find(tb => tb.name === bodyName);
+    if (!tracked) return;
+
+    const bx = tracked.gravityBody.x;
+    const by = tracked.gravityBody.y;
+    const killR = tracked.gravityBody.killRadius ?? 0;
+    const bodyMass = tracked.gravityBody.gravityMass;
+    const { vx: bodyVx, vy: bodyVy } = this.getBodyVelocity(bodyName);
+
+    const junkColors = [0x888888, 0x666666, 0x999999, 0xaaaaaa];
+    const asteroidColors = [0x8b7355, 0xa0926b, 0x7a6b50];
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const altitude = minAltitude + Math.random() * (maxAltitude - minAltitude);
+      const dist = killR + altitude;
+      const x = bx + Math.cos(angle) * dist;
+      const y = by + Math.sin(angle) * dist;
+
+      const orbitalSpeed = Math.sqrt(
+        GRAVITY_CONSTANT * bodyMass * GRAVITY_SCALE / dist
+      );
+      const tangentAngle = angle + Math.PI / 2;
+      const perturb = 0.85 + Math.random() * 0.3;
+      const localVx = Math.cos(tangentAngle) * orbitalSpeed * perturb;
+      const localVy = Math.sin(tangentAngle) * orbitalSpeed * perturb;
+
+      const isSatellite = Math.random() < 0.3;
+      const size = isSatellite ? 15 + Math.random() * 25 : 20 + Math.random() * 50;
+      const color = isSatellite
+        ? 0xaaaacc
+        : (Math.random() < 0.5
+          ? junkColors[Math.floor(Math.random() * junkColors.length)]
+          : asteroidColors[Math.floor(Math.random() * asteroidColors.length)]);
+
+      const obj = new SpaceObject(this, {
+        x, y, size,
+        health: 10 + size,
+        massYield: Math.floor(size * 0.3),
+        energyYield: Math.floor(size * 0.1),
+        gravityMass: 0,
+        color,
+        name: isSatellite ? "Satellite" : undefined,
+        velocityX: bodyVx + localVx,
+        velocityY: bodyVy + localVy,
+      });
+      this.zones.addFixedObject(obj);
+    }
+  }
+
+  private spawnAsteroidRing(
+    count: number,
+    minDist: number,
+    maxDist: number
+  ): void {
+    const sunBody = this.trackedBodies.find(tb => tb.name === "Sun");
+    if (!sunBody) return;
+
+    const sunX = sunBody.gravityBody.x;
+    const sunY = sunBody.gravityBody.y;
+    const sunMass = sunBody.gravityBody.gravityMass;
+    const asteroidColors = [0x8b7355, 0xa0926b, 0x7a6b50, 0x6b5c3e, 0x998877];
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = minDist + Math.random() * (maxDist - minDist);
+      const x = sunX + Math.cos(angle) * dist;
+      const y = sunY + Math.sin(angle) * dist;
+
+      const orbitalSpeed = Math.sqrt(GRAVITY_CONSTANT * sunMass * GRAVITY_SCALE / dist);
+      const tangentAngle = angle + Math.PI / 2;
+      const perturb = 0.85 + Math.random() * 0.3;
+
+      const size = 80 + Math.random() * 200;
+      const color = asteroidColors[Math.floor(Math.random() * asteroidColors.length)];
+
+      const obj = new SpaceObject(this, {
+        x, y, size,
+        health: 40 + Math.random() * 80,
+        massYield: 20 + Math.random() * 40,
+        energyYield: 5 + Math.random() * 10,
+        gravityMass: 0,
+        color,
+        velocityX: Math.cos(tangentAngle) * orbitalSpeed * perturb,
+        velocityY: Math.sin(tangentAngle) * orbitalSpeed * perturb,
+      });
+      this.zones.addFixedObject(obj);
+    }
+  }
+
   private getEarthVelocity(): { vx: number; vy: number } {
-    const earthOrbit = this.orbitStates.find(os => os.bodyName === "Earth");
-    if (!earthOrbit) return { vx: 0, vy: 0 };
-    const linearSpeed = earthOrbit.orbitSpeed * earthOrbit.distance * ORBIT_SPEED_SCALE;
-    const perpAngle = earthOrbit.currentAngle + Math.PI / 2;
-    return {
-      vx: Math.cos(perpAngle) * linearSpeed,
-      vy: Math.sin(perpAngle) * linearSpeed,
-    };
+    return this.getBodyVelocity("Earth");
   }
 
   private spawnNearEarth(): void {

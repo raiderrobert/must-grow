@@ -103,9 +103,9 @@ export const ZONES: ZoneDefinition[] = [
     name: "Asteroid Belt",
     minDistance: 125_000,
     maxDistance: 145_000,
-    maxObjects: 80,
+    maxObjects: 300,
     cullBelowPlayerRatio: 0.02,
-    activationRange: 15_000,
+    activationRange: 20_000,
     spawnTable: [
       {
         weight: 10, minTier: 2,
