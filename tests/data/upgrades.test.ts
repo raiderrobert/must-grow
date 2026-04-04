@@ -1,31 +1,39 @@
 import { describe, it, expect } from "vitest";
-import { UPGRADES, getUpgradeCost } from "@/data/upgrades";
-import { UPGRADE_COST_SCALING } from "@/constants";
+import { UPGRADE_CARDS, buildDrawPool, drawCards } from "@/data/upgrades";
 
-describe("upgrades", () => {
-  it("every upgrade has a baseCost > 0", () => {
-    for (const u of Object.values(UPGRADES)) {
-      expect(u.baseCost).toBeGreaterThan(0);
+describe("upgrade cards", () => {
+  it("every card has id, name, description, rarity, and apply", () => {
+    for (const card of UPGRADE_CARDS) {
+      expect(card.id).toBeTruthy();
+      expect(card.name).toBeTruthy();
+      expect(card.description).toBeTruthy();
+      expect(["common", "uncommon", "rare"]).toContain(card.rarity);
+      expect(typeof card.apply).toBe("function");
     }
   });
 
-  it("every upgrade has a minTier between 1 and 5", () => {
-    for (const u of Object.values(UPGRADES)) {
-      expect(u.minTier).toBeGreaterThanOrEqual(1);
-      expect(u.minTier).toBeLessThanOrEqual(5);
-    }
+  it("all card ids are unique", () => {
+    const ids = UPGRADE_CARDS.map(c => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("every upgrade has maxLevel > 0", () => {
-    for (const u of Object.values(UPGRADES)) {
-      expect(u.maxLevel).toBeGreaterThan(0);
-    }
+  it("buildDrawPool weights commons more than rares", () => {
+    const pool = buildDrawPool();
+    const fireRateCount = pool.filter(c => c.id === "fireRate").length;
+    const gravResistCount = pool.filter(c => c.id === "gravResist").length;
+    expect(fireRateCount).toBe(3);
+    expect(gravResistCount).toBe(1);
   });
 
-  it("getUpgradeCost scales by 1.5x per level", () => {
-    const base = 10;
-    expect(getUpgradeCost(base, 0)).toBe(10);
-    expect(getUpgradeCost(base, 1)).toBeCloseTo(10 * UPGRADE_COST_SCALING);
-    expect(getUpgradeCost(base, 2)).toBe(Math.floor(10 * UPGRADE_COST_SCALING ** 2));
+  it("drawCards returns n distinct cards", () => {
+    const cards = drawCards(3);
+    expect(cards).toHaveLength(3);
+    const ids = cards.map(c => c.id);
+    expect(new Set(ids).size).toBe(3);
+  });
+
+  it("drawCards never returns more cards than unique cards exist", () => {
+    const cards = drawCards(999);
+    expect(cards.length).toBeLessThanOrEqual(UPGRADE_CARDS.length);
   });
 });

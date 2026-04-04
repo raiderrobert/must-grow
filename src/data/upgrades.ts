@@ -1,270 +1,137 @@
-import { UPGRADE_COST_SCALING } from "@/constants";
+import type { ResourceManager } from "@/systems/ResourceManager";
+import type { PlayerStation } from "@/entities/PlayerStation";
+import type { CombatSystem } from "@/systems/CombatSystem";
 
-export type UpgradeCategory =
-  | "weapon"
-  | "automation"
-  | "energyGen"
-  | "energyStorage"
-  | "station";
+export type UpgradeRarity = "common" | "uncommon" | "rare";
 
-export interface UpgradeDefinition {
+export interface UpgradeCard {
   id: string;
   name: string;
   description: string;
-  category: UpgradeCategory;
-  baseCost: number;
-  maxLevel: number;
-  minTier: number;
-  stackable: boolean; // if true, buying adds another instance instead of leveling up
-  energyDrain?: number; // energy/sec per level (for automation)
+  rarity: UpgradeRarity;
+  /** Applied immediately when the card is chosen. */
+  apply(combat: CombatSystem, resources: ResourceManager, player: PlayerStation): void;
 }
 
-export const UPGRADES: Record<string, UpgradeDefinition> = {
-  // Tier 1 — Clamp & Survival
-  clampRange: {
-    id: "clampRange",
-    name: "Clamp Range",
-    description: "Grab targets from further away",
-    category: "weapon",
-    baseCost: 5,
-    maxLevel: 5,
-    minTier: 1,
-    stackable: false,
-  },
-  chewSpeed: {
-    id: "chewSpeed",
-    name: "Chew Speed",
-    description: "Fewer clicks to consume a target",
-    category: "weapon",
-    baseCost: 8,
-    maxLevel: 5,
-    minTier: 1,
-    stackable: false,
-  },
-  jawStrength: {
-    id: "jawStrength",
-    name: "Jaw Strength",
-    description: "More mass extracted per chew click",
-    category: "weapon",
-    baseCost: 8,
-    maxLevel: 5,
-    minTier: 1,
-    stackable: false,
-  },
-  thrusters: {
-    id: "thrusters",
-    name: "Thrusters",
-    description: "Move faster, resist gravity better",
-    category: "station",
-    baseCost: 10,
-    maxLevel: 10,
-    minTier: 1,
-    stackable: false,
-  },
-  manualGenerator: {
-    id: "manualGenerator",
-    name: "Manual Generator",
-    description: "More energy per click",
-    category: "energyGen",
-    baseCost: 5,
-    maxLevel: 10,
-    minTier: 1,
-    stackable: false,
-  },
-  basicBattery: {
-    id: "basicBattery",
-    name: "Basic Battery",
-    description: "Increase energy storage capacity",
-    category: "energyStorage",
-    baseCost: 8,
-    maxLevel: 5,
-    minTier: 1,
-    stackable: false,
-  },
-  solarPanels: {
-    id: "solarPanels",
-    name: "Solar Panels",
-    description: "Passive energy generation",
-    category: "energyGen",
-    baseCost: 15,
-    maxLevel: 5,
-    minTier: 1,
-    stackable: true,
-  },
-
-  // Tier 2 — Beam & First Automation
-  beamPower: {
-    id: "beamPower",
-    name: "Beam Power",
-    description: "More damage per zap",
-    category: "weapon",
-    baseCost: 15,
-    maxLevel: 10,
-    minTier: 2,
-    stackable: false,
-  },
-  fireRate: {
+export const UPGRADE_CARDS: UpgradeCard[] = [
+  // ── Common ─────────────────────────────────────────────────────────
+  {
     id: "fireRate",
-    name: "Fire Rate",
-    description: "Faster manual shooting",
-    category: "weapon",
-    baseCost: 15,
-    maxLevel: 10,
-    minTier: 2,
-    stackable: false,
+    name: "Overclocked Guns",
+    description: "Auto-fire 20% faster",
+    rarity: "common",
+    apply(combat) { combat.autoFireCooldown = Math.max(200, combat.autoFireCooldown * 0.8); },
   },
-  multiBeam: {
-    id: "multiBeam",
-    name: "Multi-beam",
-    description: "Hit multiple targets per shot",
-    category: "weapon",
-    baseCost: 50,
-    maxLevel: 5,
-    minTier: 2,
-    stackable: false,
+  {
+    id: "doubleShot",
+    name: "Twin Cannons",
+    description: "+1 shot per auto-fire trigger",
+    rarity: "common",
+    apply(combat) { combat.autoShotCount += 1; },
   },
-  autoTurret: {
-    id: "autoTurret",
-    name: "Auto-turret",
-    description: "Fires at nearest small target",
-    category: "automation",
-    baseCost: 30,
-    maxLevel: 5,
-    minTier: 2,
-    stackable: true,
-    energyDrain: 2,
+  {
+    id: "spreadShot",
+    name: "Scatter Shot",
+    description: "Shots spread ±15° wider",
+    rarity: "common",
+    apply(combat) { combat.spreadAngle += 15; },
   },
-  capacitorBanks: {
-    id: "capacitorBanks",
-    name: "Capacitor Banks",
-    description: "Bigger energy storage",
-    category: "energyStorage",
-    baseCost: 20,
-    maxLevel: 5,
-    minTier: 2,
-    stackable: true,
+  {
+    id: "speed",
+    name: "Afterburners",
+    description: "Movement speed +25%",
+    rarity: "common",
+    apply(_, __, player) { player.speed = Math.round(player.speed * 1.25); },
   },
-  energyAmplifier: {
-    id: "energyAmplifier",
-    name: "Energy Amplifier",
-    description: "More energy from destroyed objects",
-    category: "energyGen",
-    baseCost: 25,
-    maxLevel: 5,
-    minTier: 2,
-    stackable: false,
+  {
+    id: "battery",
+    name: "Capacitor Bank",
+    description: "Battery capacity +50",
+    rarity: "common",
+    apply(_, resources) { resources.batteryCapacity += 50; },
   },
-  shieldGenerator: {
-    id: "shieldGenerator",
-    name: "Shield Generator",
-    description: "Absorb collision damage",
-    category: "station",
-    baseCost: 40,
-    maxLevel: 3,
-    minTier: 2,
-    stackable: false,
+  // ── Uncommon ──────────────────────────────────────────────────────
+  {
+    id: "damage",
+    name: "High Yield",
+    description: "Shot damage +30%",
+    rarity: "uncommon",
+    apply(combat) { combat.beamDamage = Math.round(combat.beamDamage * 1.3); },
   },
-  efficiencyUpgrades: {
-    id: "efficiencyUpgrades",
-    name: "Efficiency",
-    description: "Reduce energy drain on all systems",
-    category: "energyStorage",
-    baseCost: 30,
-    maxLevel: 5,
-    minTier: 2,
-    stackable: false,
+  {
+    id: "burstSize",
+    name: "Bigger Burst",
+    description: "Manual burst fires +2 extra shots",
+    rarity: "uncommon",
+    apply(combat) { combat.burstShotCount += 2; },
   },
+  {
+    id: "massGain",
+    name: "Dense Core",
+    description: "Absorb 25% more mass from kills",
+    rarity: "uncommon",
+    apply(_, resources) { resources.massMultiplier *= 1.25; },
+  },
+  {
+    id: "recharge",
+    name: "Solar Array",
+    description: "Passive energy recharge +4/sec",
+    rarity: "uncommon",
+    apply(_, resources) { resources.passiveRechargeRate += 4; },
+  },
+  // ── Rare ──────────────────────────────────────────────────────────
+  {
+    id: "killRecharge",
+    name: "Combat Scavenger",
+    description: "Gain +4 energy per kill",
+    rarity: "rare",
+    apply(_, resources) { resources.killRechargeBonus += 4; },
+  },
+  {
+    id: "burstCooldown",
+    name: "Hair Trigger",
+    description: "Manual burst cooldown 25% shorter",
+    rarity: "rare",
+    apply(combat) { combat.burstCooldownMax = Math.max(300, combat.burstCooldownMax * 0.75); },
+  },
+  {
+    id: "boostCost",
+    name: "Efficient Boost",
+    description: "Boost energy cost 40% less",
+    rarity: "rare",
+    apply(_, resources) { resources.boostCostPerSec *= 0.6; },
+  },
+  {
+    id: "gravResist",
+    name: "Gravity Shield",
+    description: "Gravity pull reduced 30%",
+    rarity: "rare",
+    apply(_, __, player) { player.gravityResistance = Math.min(0.9, player.gravityResistance + 0.3); },
+  },
+];
 
-  // Tier 3 — Planet Destroyer
-  tractorBeam: {
-    id: "tractorBeam",
-    name: "Tractor Beam",
-    description: "Pulls in nearby debris automatically",
-    category: "automation",
-    baseCost: 80,
-    maxLevel: 3,
-    minTier: 3,
-    stackable: false,
-    energyDrain: 5,
-  },
-  droneSwarm: {
-    id: "droneSwarm",
-    name: "Drone Swarm",
-    description: "AI drones hunt and destroy for you",
-    category: "automation",
-    baseCost: 100,
-    maxLevel: 5,
-    minTier: 3,
-    stackable: true,
-    energyDrain: 4,
-  },
-  fusionReactor: {
-    id: "fusionReactor",
-    name: "Fusion Reactor",
-    description: "High passive energy — consumes mass",
-    category: "energyGen",
-    baseCost: 120,
-    maxLevel: 3,
-    minTier: 3,
-    stackable: false,
-  },
-  powerCore: {
-    id: "powerCore",
-    name: "Power Core",
-    description: "Massive energy storage buffer",
-    category: "energyStorage",
-    baseCost: 100,
-    maxLevel: 3,
-    minTier: 3,
-    stackable: false,
-  },
+/** Build a weighted draw pool. Commons ×3, Uncommons ×2, Rares ×1. */
+export function buildDrawPool(): UpgradeCard[] {
+  const pool: UpgradeCard[] = [];
+  for (const card of UPGRADE_CARDS) {
+    const count = card.rarity === "common" ? 3 : card.rarity === "uncommon" ? 2 : 1;
+    for (let i = 0; i < count; i++) pool.push(card);
+  }
+  return pool;
+}
 
-  // Tier 4 — Planet Eater
-  gravityWell: {
-    id: "gravityWell",
-    name: "Gravity Well",
-    description: "Everything nearby drifts toward you",
-    category: "automation",
-    baseCost: 300,
-    maxLevel: 3,
-    minTier: 4,
-    stackable: false,
-    energyDrain: 10,
-  },
-  stellarHarvester: {
-    id: "stellarHarvester",
-    name: "Stellar Harvester",
-    description: "Siphon energy from nearby stars",
-    category: "energyGen",
-    baseCost: 400,
-    maxLevel: 3,
-    minTier: 4,
-    stackable: false,
-  },
-  darkEnergyMatrix: {
-    id: "darkEnergyMatrix",
-    name: "Dark Energy Matrix",
-    description: "Near-infinite energy storage",
-    category: "energyStorage",
-    baseCost: 500,
-    maxLevel: 3,
-    minTier: 4,
-    stackable: false,
-  },
+/** Pick n distinct cards at random from the weighted pool. */
+export function drawCards(n: number): UpgradeCard[] {
+  const pool = buildDrawPool();
+  const drawn: UpgradeCard[] = [];
+  const usedIds = new Set<string>();
 
-  // Tier 5 — Star Killer
-  superWeapon: {
-    id: "superWeapon",
-    name: "Super Weapon",
-    description: "Charged planet-killer blast",
-    category: "weapon",
-    baseCost: 2000,
-    maxLevel: 3,
-    minTier: 5,
-    stackable: false,
-  },
-};
-
-export function getUpgradeCost(baseCost: number, currentLevel: number): number {
-  return Math.floor(baseCost * UPGRADE_COST_SCALING ** currentLevel);
+  for (let attempts = 0; attempts < 100 && drawn.length < n; attempts++) {
+    const card = pool[Math.floor(Math.random() * pool.length)];
+    if (!usedIds.has(card.id)) {
+      drawn.push(card);
+      usedIds.add(card.id);
+    }
+  }
+  return drawn;
 }
