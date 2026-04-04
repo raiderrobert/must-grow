@@ -1,7 +1,6 @@
 import Phaser from "phaser";
 import { COLORS } from "@/constants";
 import { ResourceManager } from "@/systems/ResourceManager";
-import { GeneratorButton } from "@/ui/GeneratorButton";
 import { getTierForMass, getTierName } from "@/data/tiers";
 import type { AudioManager } from "@/systems/AudioManager";
 
@@ -14,9 +13,9 @@ export class HUD {
   private energyText!: Phaser.GameObjects.Text;
   private massText!: Phaser.GameObjects.Text;
   private tierText!: Phaser.GameObjects.Text;
-  private powerDeadOverlay!: Phaser.GameObjects.Rectangle;
+  private burstIndicator!: Phaser.GameObjects.Text;
 
-  // All HUD game objects — populated during construction so cameras can ignore them
+  // All tracked HUD objects for camera ignore
   private objects: Phaser.GameObjects.GameObject[] = [];
 
   constructor(
@@ -30,12 +29,7 @@ export class HUD {
     this.createEnergyBar();
     this.createMassCounter();
     this.createTierIndicator();
-    this.createPowerDeadOverlay();
-
-    // Generator hint label (display-only)
-    const genBtn = new GeneratorButton(scene, 80, scene.scale.height - 40);
-    this.objects.push(genBtn.getContainer());
-    if (audio) genBtn.setAudio(audio);
+    this.createBurstIndicator();
 
     if (audio) {
       const muteBtn = scene.add
@@ -57,7 +51,7 @@ export class HUD {
       .text(
         scene.scale.width / 2,
         scene.scale.height - 16,
-        "WASD move  ·  SPACE/J attack  ·  K power  ·  E upgrades",
+        "WASD move  ·  SHIFT boost  ·  SPACE/J burst fire",
         { fontFamily: "monospace", fontSize: "11px", color: "#666" }
       )
       .setOrigin(0.5, 1)
@@ -67,7 +61,12 @@ export class HUD {
     this.objects.push(hint);
   }
 
-  /** All Phaser GameObjects owned by the HUD — pass to camera.ignore(). */
+  /** Tell a camera to ignore all HUD objects (so they're only rendered by the UI camera). */
+  ignoreWithCamera(camera: Phaser.Cameras.Scene2D.Camera): void {
+    camera.ignore(this.objects.filter(Boolean));
+  }
+
+  /** All HUD GameObjects — for external camera setup. */
   getObjects(): Phaser.GameObjects.GameObject[] {
     return this.objects;
   }
@@ -127,21 +126,16 @@ export class HUD {
     this.objects.push(this.tierText);
   }
 
-  private createPowerDeadOverlay(): void {
-    // Pre-created hidden; toggled in update() — always part of getObjects()
-    this.powerDeadOverlay = this.scene.add
-      .rectangle(
-        this.scene.scale.width / 2,
-        this.scene.scale.height / 2,
-        this.scene.scale.width,
-        this.scene.scale.height,
-        0xff0000,
-        0.1
-      )
+  private createBurstIndicator(): void {
+    this.burstIndicator = this.scene.add
+      .text(20, 94, "", {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#ffd93d",
+      })
       .setScrollFactor(0)
-      .setDepth(50)
-      .setVisible(false);
-    this.objects.push(this.powerDeadOverlay);
+      .setDepth(100);
+    this.objects.push(this.burstIndicator);
   }
 
   update(): void {
@@ -167,6 +161,8 @@ export class HUD {
     const tier = getTierForMass(this.resources.totalMassEarned);
     this.tierText.setText(`Tier ${tier}: ${getTierName(tier)}`);
 
-    this.powerDeadOverlay.setVisible(this.resources.isPowerDead);
+    this.burstIndicator.setText(
+      this.resources.canBurst ? "BURST ready [SPC]" : `burst ${Math.floor(this.resources.energy)}/${this.resources.burstCost}`
+    );
   }
 }

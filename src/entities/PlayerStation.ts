@@ -20,19 +20,22 @@ export class PlayerStation {
     D: Phaser.Input.Keyboard.Key;
   };
   private attackKeys!: Phaser.Input.Keyboard.Key[];
-  private powerKey!: Phaser.Input.Keyboard.Key;
+  private boostKey!: Phaser.Input.Keyboard.Key;
   private upgradeKey!: Phaser.Input.Keyboard.Key;
   private pad: Phaser.Input.Gamepad.Gamepad | null = null;
   private thrustEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
+
+  // One-shot gamepad flags (set by event, cleared by consume methods)
   private padAttackJust: boolean = false;
-  private padPowerJust: boolean = false;
   private padUpgradeJust: boolean = false;
 
   isLocked: boolean = false;
+  isBoosting: boolean = false;
 
-  // Stats (modified by upgrades)
+  // Stats (modified by upgrades and cards)
   speed: number = PLAYER_BASE_SPEED;
   thrustPower: number = 50;
+  gravityResistance: number = 0; // 0 = full gravity, 0.9 = 90% reduction
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -70,27 +73,19 @@ export class PlayerStation {
       scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.J),
     ];
-    this.powerKey = scene.input.keyboard!.addKey(
-      Phaser.Input.Keyboard.KeyCodes.K
-    );
-    this.upgradeKey = scene.input.keyboard!.addKey(
-      Phaser.Input.Keyboard.KeyCodes.E
-    );
+    this.boostKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+    this.upgradeKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
 
     // Gamepad support
     if (scene.input.gamepad) {
       scene.input.gamepad.once(
         "connected",
-        (pad: Phaser.Input.Gamepad.Gamepad) => {
-          this.pad = pad;
-        }
+        (pad: Phaser.Input.Gamepad.Gamepad) => { this.pad = pad; }
       );
-      // One-shot button events (button index: 0=A, 1=B, 9=Start)
       scene.input.gamepad.on(
         "down",
         (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
           if (button.index === 0) this.padAttackJust = true;
-          if (button.index === 1) this.padPowerJust = true;
           if (button.index === 9) this.padUpgradeJust = true;
         }
       );
@@ -99,7 +94,7 @@ export class PlayerStation {
     // Camera follow
     scene.cameras.main.startFollow(this.body, true, 0.08, 0.08);
 
-    // Particle setup
+    // Particles
     this.initParticles();
   }
 
@@ -150,7 +145,7 @@ export class PlayerStation {
   }
 
   update(_delta: number): void {
-    // Refresh gamepad reference in case it connected after scene start
+    // Refresh gamepad reference
     if (!this.pad && (this.scene.input.gamepad?.total ?? 0) > 0) {
       this.pad = this.scene.input.gamepad!.getPad(0);
     }
@@ -162,18 +157,15 @@ export class PlayerStation {
       return;
     }
 
-    const accel = this.speed * 3;
     const stickX = this.pad?.axes[0]?.getValue() ?? 0;
     const stickY = this.pad?.axes[1]?.getValue() ?? 0;
+    const boostMult = this.isBoosting ? 1.8 : 1.0;
+    const accel = this.speed * 3 * boostMult;
 
     // Horizontal
     if (this.cursors.left.isDown || this.wasd.A.isDown || stickX < -0.2) {
       this.body.setAccelerationX(-accel * Math.max(Math.abs(stickX), 1));
-    } else if (
-      this.cursors.right.isDown ||
-      this.wasd.D.isDown ||
-      stickX > 0.2
-    ) {
+    } else if (this.cursors.right.isDown || this.wasd.D.isDown || stickX > 0.2) {
       this.body.setAccelerationX(accel * Math.max(Math.abs(stickX), 1));
     } else {
       this.body.setAccelerationX(0);
@@ -182,11 +174,7 @@ export class PlayerStation {
     // Vertical
     if (this.cursors.up.isDown || this.wasd.W.isDown || stickY < -0.2) {
       this.body.setAccelerationY(-accel * Math.max(Math.abs(stickY), 1));
-    } else if (
-      this.cursors.down.isDown ||
-      this.wasd.S.isDown ||
-      stickY > 0.2
-    ) {
+    } else if (this.cursors.down.isDown || this.wasd.S.isDown || stickY > 0.2) {
       this.body.setAccelerationY(accel * Math.max(Math.abs(stickY), 1));
     } else {
       this.body.setAccelerationY(0);
@@ -195,47 +183,40 @@ export class PlayerStation {
     // Cap speed
     const vel = this.body.body!.velocity;
     const mag = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
-    if (mag > this.speed) {
-      this.body.body!.velocity.scale(this.speed / mag);
+    const maxSpeed = this.speed * (this.isBoosting ? 1.8 : 1.0);
+    if (mag > maxSpeed) {
+      this.body.body!.velocity.scale(maxSpeed / mag);
     }
 
     // Thrust particles
     const isThrusting =
-      this.cursors.up.isDown ||
-      this.wasd.W.isDown ||
-      this.cursors.down.isDown ||
-      this.wasd.S.isDown ||
-      this.cursors.left.isDown ||
-      this.wasd.A.isDown ||
-      this.cursors.right.isDown ||
-      this.wasd.D.isDown ||
-      Math.abs(stickX) > 0.2 ||
-      Math.abs(stickY) > 0.2;
+      this.cursors.up.isDown || this.wasd.W.isDown ||
+      this.cursors.down.isDown || this.wasd.S.isDown ||
+      this.cursors.left.isDown || this.wasd.A.isDown ||
+      this.cursors.right.isDown || this.wasd.D.isDown ||
+      Math.abs(stickX) > 0.2 || Math.abs(stickY) > 0.2;
 
     if (this.thrustEmitter) {
       this.thrustEmitter.emitting = isThrusting;
     }
   }
 
-  /** Returns true if attack was pressed this frame (Space/J or gamepad A). Clears the flag. */
+  /** Returns true if Space/J or gamepad A was just pressed. Clears the flag. */
   consumeAttack(): boolean {
-    const keyJustDown = this.attackKeys.some((k) =>
-      Phaser.Input.Keyboard.JustDown(k)
-    );
+    const keyJustDown = this.attackKeys.some(k => Phaser.Input.Keyboard.JustDown(k));
     const padJustDown = this.padAttackJust;
     this.padAttackJust = false;
     return keyJustDown || padJustDown;
   }
 
-  /** Returns true if power key was pressed this frame (K or gamepad B). Clears the flag. */
-  consumePower(): boolean {
-    const keyJustDown = Phaser.Input.Keyboard.JustDown(this.powerKey);
-    const padJustDown = this.padPowerJust;
-    this.padPowerJust = false;
-    return keyJustDown || padJustDown;
+  /** Returns true while Shift or gamepad LB is held. */
+  isBoostHeld(): boolean {
+    const keyHeld = this.boostKey.isDown;
+    const padHeld = (this.pad?.buttons[4]?.pressed ?? false);
+    return keyHeld || padHeld;
   }
 
-  /** Returns true if upgrade menu key was pressed this frame (E or gamepad Start). Clears the flag. */
+  /** Returns true if E or gamepad Start was just pressed. Clears the flag. */
   consumeUpgradeToggle(): boolean {
     const keyJustDown = Phaser.Input.Keyboard.JustDown(this.upgradeKey);
     const padJustDown = this.padUpgradeJust;
@@ -253,12 +234,8 @@ export class PlayerStation {
     body.velocity.y += gy;
   }
 
-  get x(): number {
-    return this.body.x;
-  }
-  get y(): number {
-    return this.body.y;
-  }
+  get x(): number { return this.body.x; }
+  get y(): number { return this.body.y; }
 
   setSize(newSize: number): void {
     this.size = newSize;
