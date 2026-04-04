@@ -47,6 +47,7 @@ export class GameScene extends Phaser.Scene {
   private nextMilestone: number = 50;
   private readonly MILESTONE_SCALE = 1.6;
   private isPaused: boolean = false;
+  private elapsedTime: number = 0; // ms since game start
 
   private starfieldLayers!: Phaser.GameObjects.TileSprite[];
   private gravityIndicatorGraphics!: Phaser.GameObjects.Graphics;
@@ -203,6 +204,8 @@ export class GameScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (this.isPaused) return;
+
+    this.elapsedTime += delta;
 
     // Gravity — delta-based with GRAVITY_SCALE tuning
     const pull = this.gravity.calculateDominantPull(this.player.x, this.player.y);
@@ -433,6 +436,10 @@ export class GameScene extends Phaser.Scene {
 
     // Camera shake for dramatic effect
     this.cameras.main.shake(500, 0.01 * newTier);
+
+    if (newTier >= 4) {
+      this.hud.showKillTracker();
+    }
   }
 
   private getBodyVelocity(bodyName: string): { vx: number; vy: number } {
@@ -585,6 +592,80 @@ export class GameScene extends Phaser.Scene {
     if (idx !== -1) this.trackedBodies.splice(idx, 1);
     const shakeIntensity = Math.min(0.02, 0.005 + tracked.spaceObj.config.size / 100_000);
     this.cameras.main.shake(1000, shakeIntensity);
+
+    const allDestroyed = this.hud.markBodyDestroyed(tracked.name);
+    if (allDestroyed) {
+      this.showWinScreen();
+    }
+  }
+
+  private showWinScreen(): void {
+    this.isPaused = true;
+    this.physics.world.pause();
+
+    const { width, height } = this.scale;
+
+    // Dark overlay
+    const overlay = this.add
+      .rectangle(width / 2, height / 2, width, height, 0x000000, 0.85)
+      .setScrollFactor(0)
+      .setDepth(600);
+
+    // Format elapsed time
+    const totalSeconds = Math.floor(this.elapsedTime / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const timeStr = `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+
+    // Title
+    this.add
+      .text(width / 2, height * 0.35, "YOU WIN", {
+        fontFamily: "monospace",
+        fontSize: "64px",
+        color: "#ffd93d",
+        stroke: "#000",
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(601);
+
+    // Subtitle
+    this.add
+      .text(width / 2, height * 0.35 + 80, "The solar system has been destroyed.", {
+        fontFamily: "monospace",
+        fontSize: "16px",
+        color: "#aaa",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(601);
+
+    // Time
+    this.add
+      .text(width / 2, height * 0.55, `Time: ${timeStr}`, {
+        fontFamily: "monospace",
+        fontSize: "28px",
+        color: "#4ecdc4",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(601);
+
+    // Stats
+    this.add
+      .text(width / 2, height * 0.55 + 50, `Total mass consumed: ${Math.floor(this.resources.totalMassEarned).toLocaleString()}`, {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: "#888",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(601);
+
+    // Ignore all win screen objects from main camera (render on UI camera only)
+    // The overlay and text use setScrollFactor(0) which is enough for the UI camera
+    this.cameras.main.ignore([overlay]);
   }
 
   onCollision(obj: SpaceObject): void {

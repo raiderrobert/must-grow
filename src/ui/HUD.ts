@@ -21,6 +21,10 @@ export class HUD {
   private weaponSlotFill!: Phaser.GameObjects.Rectangle;
   private weaponSlotLabel!: Phaser.GameObjects.Text;
   private weaponSlotHint!: Phaser.GameObjects.Text;
+
+  private killTrackerTexts: Phaser.GameObjects.Text[] = [];
+  private killTrackerVisible: boolean = false;
+  private destroyedBodies: Set<string> = new Set();
   private combat: CombatSystem | null = null;
   private inputManager: InputManager | null = null;
   private controlsHint!: Phaser.GameObjects.Text;
@@ -45,6 +49,7 @@ export class HUD {
     this.createTierIndicator();
     this.createTierProgress();
     this.createWeaponSlot();
+    this.createKillTracker();
 
     if (audio) {
       const muteBtn = scene.add
@@ -70,6 +75,49 @@ export class HUD {
       .setScrollFactor(0)
       .setDepth(100);
     this.objects.push(this.controlsHint);
+  }
+
+  private createKillTracker(): void {
+    const bodyNames = ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Sun"];
+    const startX = this.scene.scale.width / 2 - (bodyNames.length * 70) / 2;
+    const y = 10;
+
+    for (let i = 0; i < bodyNames.length; i++) {
+      const text = this.scene.add
+        .text(startX + i * 70 + 35, y, bodyNames[i], {
+          fontFamily: "monospace",
+          fontSize: "10px",
+          color: "#555",
+        })
+        .setOrigin(0.5, 0)
+        .setScrollFactor(0)
+        .setDepth(100)
+        .setVisible(false)
+        .setData("bodyName", bodyNames[i]);
+      this.killTrackerTexts.push(text);
+      this.objects.push(text);
+    }
+  }
+
+  /** Show the kill tracker (called when player reaches tier 4+). */
+  showKillTracker(): void {
+    if (this.killTrackerVisible) return;
+    this.killTrackerVisible = true;
+    for (const text of this.killTrackerTexts) {
+      text.setVisible(true);
+    }
+  }
+
+  /** Mark a body as destroyed on the tracker. Returns true if all bodies are now destroyed. */
+  markBodyDestroyed(name: string): boolean {
+    this.destroyedBodies.add(name);
+    for (const text of this.killTrackerTexts) {
+      if (text.getData("bodyName") === name) {
+        text.setText(`✓ ${name}`);
+        text.setColor("#4ecdc4");
+      }
+    }
+    return this.destroyedBodies.size >= this.killTrackerTexts.length;
   }
 
   /** Tell a camera to ignore all HUD objects (so they're only rendered by the UI camera). */
