@@ -58,20 +58,28 @@ export class SpaceObject {
         this.updateDamageVisual();
       }
     });
+    // Keep overlay position in sync even when health > 75%
+    if (this.damageOverlay) {
+      this.damageOverlay.setPosition(this.sprite.x, this.sprite.y);
+    }
     return this.health <= 0;
   }
 
   private updateDamageVisual(): void {
     const ratio = this.health / this.maxHealth;
-    if (ratio > 0.75) return;
+    if (ratio > 0.75) {
+      if (this.damageOverlay) this.damageOverlay.clear();
+      return;
+    }
 
     if (!this.damageOverlay) {
       this.damageOverlay = this.scene.add.graphics().setDepth(2);
     }
     this.damageOverlay.clear();
 
-    const x = this.sprite.x;
-    const y = this.sprite.y;
+    // Position graphics on the sprite — draw cracks relative to (0,0)
+    this.damageOverlay.setPosition(this.sprite.x, this.sprite.y);
+
     const r = this.config.size;
     const crackAlpha = 1 - ratio;
     this.damageOverlay.lineStyle(Math.max(1, r * 0.03), 0xff4400, crackAlpha * 0.8);
@@ -81,7 +89,7 @@ export class SpaceObject {
     for (let i = 0; i < crackCount; i++) {
       const a = ((seed * (i + 1) * 137.5) % 360) * (Math.PI / 180);
       const len = r * (0.5 + ((seed * (i + 3)) % 50) / 100);
-      this.damageOverlay.lineBetween(x, y, x + Math.cos(a) * len, y + Math.sin(a) * len);
+      this.damageOverlay.lineBetween(0, 0, Math.cos(a) * len, Math.sin(a) * len);
     }
   }
 
