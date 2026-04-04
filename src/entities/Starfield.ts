@@ -10,9 +10,9 @@ export function createStarfield(
   const tileSize = 512;
 
   const layerConfigs = [
-    { count: 40, size: 1, alpha: 0.3, scrollFactor: 0.1 },
-    { count: 30, size: 1.5, alpha: 0.5, scrollFactor: 0.3 },
-    { count: 20, size: 2, alpha: 0.8, scrollFactor: 0.6 },
+    { count: 60, size: 0.5, alpha: 0.15, scrollFactor: 0.05 },
+    { count: 40, size: 0.5, alpha: 0.25, scrollFactor: 0.15 },
+    { count: 25, size: 0.75, alpha: 0.40, scrollFactor: 0.4 },
   ];
 
   for (const [i, config] of layerConfigs.entries()) {
