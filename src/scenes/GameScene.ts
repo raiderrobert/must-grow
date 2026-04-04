@@ -104,7 +104,7 @@ export class GameScene extends Phaser.Scene {
     this.spawnNearEarth();
 
     // Debris belts orbiting each planet
-    this.spawnDebrisBelt("Earth",   30, 500,   5_000);
+    this.spawnDebrisBelt("Earth",  100, 500,   5_000);
     this.spawnDebrisBelt("Mercury", 10, 200,   2_000);
     this.spawnDebrisBelt("Venus",   15, 400,   3_000);
     this.spawnDebrisBelt("Mars",    12, 300,   2_500);
@@ -205,7 +205,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isPaused) return;
 
     // Gravity — delta-based with GRAVITY_SCALE tuning
-    const pull = this.gravity.calculateTotalPull(this.player.x, this.player.y);
+    const pull = this.gravity.calculateDominantPull(this.player.x, this.player.y);
     const resist = 1 - this.player.gravityResistance;
     this.player.applyGravity(
       pull.x * (delta / 1000) * GRAVITY_SCALE * resist,
@@ -218,7 +218,7 @@ export class GameScene extends Phaser.Scene {
     // Gravity on all zone objects (makes them orbit)
     for (const obj of this.zones.getObjects()) {
       if (!obj.sprite.active || !obj.sprite.body) continue;
-      const objPull = this.gravity.calculateTotalPull(obj.sprite.x, obj.sprite.y);
+      const objPull = this.gravity.calculateDominantPull(obj.sprite.x, obj.sprite.y);
       const objBody = obj.sprite.body as Phaser.Physics.Arcade.Body;
       objBody.velocity.x += objPull.x * (delta / 1000) * GRAVITY_SCALE;
       objBody.velocity.y += objPull.y * (delta / 1000) * GRAVITY_SCALE;
@@ -228,7 +228,7 @@ export class GameScene extends Phaser.Scene {
     for (const sprite of this.combat.debrisGroup.getChildren()) {
       const s = sprite as Phaser.Physics.Arcade.Sprite;
       if (!s.active || !s.body) continue;
-      const dPull = this.gravity.calculateTotalPull(s.x, s.y);
+      const dPull = this.gravity.calculateDominantPull(s.x, s.y);
       const dBody = s.body as Phaser.Physics.Arcade.Body;
       dBody.velocity.x += dPull.x * (delta / 1000) * GRAVITY_SCALE;
       dBody.velocity.y += dPull.y * (delta / 1000) * GRAVITY_SCALE;
@@ -587,7 +587,7 @@ export class GameScene extends Phaser.Scene {
 
   private updateGravityIndicator(): void {
     this.gravityIndicatorGraphics.clear();
-    const pull = this.gravity.calculateTotalPull(this.player.x, this.player.y);
+    const pull = this.gravity.calculateDominantPull(this.player.x, this.player.y);
     if (pull.magnitude < 0.1) return;
 
     const nx = pull.x / pull.magnitude;
@@ -597,9 +597,10 @@ export class GameScene extends Phaser.Scene {
     let alpha = 0.6;
     let arrowLength = 20;
 
-    for (const body of this.gravity.getBodies()) {
-      const level = this.gravity.getDangerLevel(body, this.player.x, this.player.y, this.player.thrustPower);
-      if (level === "deadly") { color = 0xff4444; alpha = 1.0; arrowLength = 28; break; }
+    const dominant = this.gravity.getDominantBody(this.player.x, this.player.y);
+    if (dominant) {
+      const level = this.gravity.getDangerLevel(dominant, this.player.x, this.player.y, this.player.thrustPower);
+      if (level === "deadly") { color = 0xff4444; alpha = 1.0; arrowLength = 28; }
       else if (level === "warning") { color = 0xffaa44; alpha = 0.85; arrowLength = 24; }
     }
 
