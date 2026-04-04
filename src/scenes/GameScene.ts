@@ -184,6 +184,25 @@ export class GameScene extends Phaser.Scene {
       pull.y * (delta / 1000) * GRAVITY_SCALE * resist
     );
 
+    // Gravity on all zone objects (makes them orbit)
+    for (const obj of this.zones.getObjects()) {
+      if (!obj.sprite.active || !obj.sprite.body) continue;
+      const objPull = this.gravity.calculateTotalPull(obj.sprite.x, obj.sprite.y);
+      const objBody = obj.sprite.body as Phaser.Physics.Arcade.Body;
+      objBody.velocity.x += objPull.x * (delta / 1000) * GRAVITY_SCALE;
+      objBody.velocity.y += objPull.y * (delta / 1000) * GRAVITY_SCALE;
+    }
+
+    // Gravity on debris
+    for (const sprite of this.combat.debrisGroup.getChildren()) {
+      const s = sprite as Phaser.Physics.Arcade.Sprite;
+      if (!s.active || !s.body) continue;
+      const dPull = this.gravity.calculateTotalPull(s.x, s.y);
+      const dBody = s.body as Phaser.Physics.Arcade.Body;
+      dBody.velocity.x += dPull.x * (delta / 1000) * GRAVITY_SCALE;
+      dBody.velocity.y += dPull.y * (delta / 1000) * GRAVITY_SCALE;
+    }
+
     // Gravity death
     if (this.gravity.isInLethalZone(this.player.x, this.player.y, this.player.thrustPower)) {
       this.handleDeath();
