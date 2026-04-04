@@ -36,8 +36,6 @@ export class PlayerStation {
 
     this.body = scene.physics.add.sprite(PLAYER_SPAWN_X, PLAYER_SPAWN_Y, textureKey);
     this.body.setCollideWorldBounds(true);
-    this.body.setDamping(true);
-    this.body.setDrag(0.99);
     this.body.setScale(this.size / 32);
 
     scene.cameras.main.startFollow(this.body, true, 0.08, 0.08);
@@ -106,9 +104,6 @@ export class PlayerStation {
 
     this.body.setAccelerationX(mx !== 0 ? Math.sign(mx) * accel * Math.abs(mx) : 0);
     this.body.setAccelerationY(my !== 0 ? Math.sign(my) * accel * Math.abs(my) : 0);
-
-    const maxSpeed = this.speed * boostMult;
-    (this.body.body as Phaser.Physics.Arcade.Body).setMaxVelocity(maxSpeed, maxSpeed);
 
     if (this.thrustEmitter) {
       this.thrustEmitter.emitting = this.input.isMoving;
