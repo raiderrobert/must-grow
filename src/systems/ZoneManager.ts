@@ -2,20 +2,23 @@ import Phaser from "phaser";
 import { ZONES, type ZoneDefinition } from "@/data/zones";
 import { SpaceObject } from "@/entities/SpaceObject";
 import { WORLD_WIDTH, WORLD_HEIGHT } from "@/constants";
+import type { GravitySystem } from "@/systems/GravitySystem";
 
 const CENTER_X = WORLD_WIDTH / 2;
 const CENTER_Y = WORLD_HEIGHT / 2;
 
 export class ZoneManager {
   private scene: Phaser.Scene;
+  private gravity: GravitySystem | null;
   private objects: SpaceObject[] = [];
   private spawnTimer: number = 0;
-  private spawnInterval: number = 2000; // ms between spawn checks
+  private spawnInterval: number = 2000;
 
   objectGroup!: Phaser.Physics.Arcade.Group;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, gravity: GravitySystem | null = null) {
     this.scene = scene;
+    this.gravity = gravity;
     this.objectGroup = scene.physics.add.group();
   }
 
@@ -91,6 +94,17 @@ export class ZoneManager {
     }
   }
 
+  /** Returns true if the position is inside any gravity body's warning band. */
+  private isInsideBodyZone(x: number, y: number): boolean {
+    if (!this.gravity) return false;
+    for (const body of this.gravity.getBodies()) {
+      if (body.killRadius === undefined) continue;
+      const dist = Phaser.Math.Distance.Between(x, y, body.x, body.y);
+      if (dist < body.killRadius * 1.2) return true;
+    }
+    return false;
+  }
+
   private spawnInZone(
     zone: ZoneDefinition,
     playerTier: number,
@@ -102,43 +116,38 @@ export class ZoneManager {
     const eligible = zone.spawnTable.filter((e) => playerTier >= e.minTier);
     if (eligible.length === 0) return;
 
-    // Weighted random selection
     const totalWeight = eligible.reduce((sum, e) => sum + e.weight, 0);
     let roll = Math.random() * totalWeight;
     let selected = eligible[0];
     for (const entry of eligible) {
       roll -= entry.weight;
-      if (roll <= 0) {
-        selected = entry;
-        break;
-      }
+      if (roll <= 0) { selected = entry; break; }
     }
 
-    const angle = Math.random() * Math.PI * 2;
-
-    // Bias spawn ring toward the player's current distance from center
     const playerDist = Phaser.Math.Distance.Between(playerX, playerY, CENTER_X, CENTER_Y);
-    const minD = skipDistCheck
-      ? zone.minDistance
-      : Math.max(zone.minDistance, playerDist - 400);
-    const maxD = skipDistCheck
-      ? zone.maxDistance
-      : Math.min(zone.maxDistance, playerDist + 600);
-    const dist = minD + Math.random() * Math.max(maxD - minD, 0);
 
-    const x = CENTER_X + Math.cos(angle) * dist;
-    const y = CENTER_Y + Math.sin(angle) * dist;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const minD = skipDistCheck ? zone.minDistance : Math.max(zone.minDistance, playerDist - 400);
+      const maxD = skipDistCheck ? zone.maxDistance : Math.min(zone.maxDistance, playerDist + 600);
+      const dist = minD + Math.random() * Math.max(maxD - minD, 0);
 
-    // Spawn radius scales with player size
-    const spawnMin = Math.max(200, playerSize * 3);
-    const spawnMax = Math.max(2000, playerSize * 25);
-    const distToPlayer = Phaser.Math.Distance.Between(x, y, playerX, playerY);
-    if (!skipDistCheck && (distToPlayer < spawnMin || distToPlayer > spawnMax)) return;
+      const x = CENTER_X + Math.cos(angle) * dist;
+      const y = CENTER_Y + Math.sin(angle) * dist;
 
-    const config = selected.factory();
-    const obj = new SpaceObject(this.scene, { x, y, ...config });
-    this.objects.push(obj);
-    this.objectGroup.add(obj.sprite);
+      if (this.isInsideBodyZone(x, y)) continue;
+
+      const spawnMin = Math.max(200, playerSize * 3);
+      const spawnMax = Math.max(2000, playerSize * 25);
+      const distToPlayer = Phaser.Math.Distance.Between(x, y, playerX, playerY);
+      if (!skipDistCheck && (distToPlayer < spawnMin || distToPlayer > spawnMax)) continue;
+
+      const config = selected.factory();
+      const obj = new SpaceObject(this.scene, { x, y, ...config });
+      this.objects.push(obj);
+      this.objectGroup.add(obj.sprite);
+      return;
+    }
   }
 
   /** Add a permanently-placed object (planet). Never culled by size. */
