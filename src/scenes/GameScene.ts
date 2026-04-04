@@ -9,6 +9,7 @@ import { ZoneManager } from "@/systems/ZoneManager";
 import { getTierForMass, getTierName } from "@/data/tiers";
 import { CombatSystem } from "@/systems/CombatSystem";
 import { HUD } from "@/ui/HUD";
+import { UpgradeShop } from "@/ui/UpgradeShop";
 
 export class GameScene extends Phaser.Scene {
   player!: PlayerStation;
@@ -18,6 +19,7 @@ export class GameScene extends Phaser.Scene {
   zones!: ZoneManager;
   combat!: CombatSystem;
   hud!: HUD;
+  shop!: UpgradeShop;
   currentTier: number = 1;
 
   constructor() {
@@ -50,6 +52,7 @@ export class GameScene extends Phaser.Scene {
     this.combat.setUpgrades(this.upgrades);
 
     this.hud = new HUD(this, this.resources);
+    this.shop = new UpgradeShop(this, this.upgrades, this.resources);
 
     // Collision: player vs space objects
     this.physics.add.overlap(
