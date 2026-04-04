@@ -71,11 +71,22 @@ export class ZoneManager {
     }
   }
 
+  /** Pre-populate zones at scene start — fills each zone to 70% capacity immediately. */
+  populate(playerX: number, playerY: number, playerTier: number): void {
+    for (const zone of ZONES) {
+      const target = Math.floor(zone.maxObjects * 0.7);
+      for (let i = 0; i < target; i++) {
+        this.spawnInZone(zone, playerTier, playerX, playerY, true);
+      }
+    }
+  }
+
   private spawnInZone(
     zone: ZoneDefinition,
     playerTier: number,
     playerX: number,
-    playerY: number
+    playerY: number,
+    skipDistCheck: boolean = false
   ): void {
     const eligible = zone.spawnTable.filter((e) => playerTier >= e.minTier);
     if (eligible.length === 0) return;
@@ -100,7 +111,7 @@ export class ZoneManager {
 
     // Don't spawn too close to or too far from player
     const distToPlayer = Phaser.Math.Distance.Between(x, y, playerX, playerY);
-    if (distToPlayer < 200 || distToPlayer > 1200) return;
+    if (!skipDistCheck && (distToPlayer < 200 || distToPlayer > 2000)) return;
 
     const config = selected.factory(x, y);
     const obj = new SpaceObject(this.scene, { x, y, ...config });

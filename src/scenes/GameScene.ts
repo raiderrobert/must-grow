@@ -47,6 +47,7 @@ export class GameScene extends Phaser.Scene {
     this.gravity = new GravitySystem();
     this.zones = new ZoneManager(this);
     this.player = new PlayerStation(this);
+    this.zones.populate(this.player.x, this.player.y, 1);
 
     // Earth gravity body — below starting position
     this.gravity.addBody({
