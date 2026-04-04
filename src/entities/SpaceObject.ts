@@ -10,6 +10,8 @@ export interface SpaceObjectConfig {
   gravityMass: number;
   color: number;
   name?: string;
+  velocityX?: number;
+  velocityY?: number;
 }
 
 export class SpaceObject {
@@ -42,8 +44,8 @@ export class SpaceObject {
     this.sprite = scene.physics.add.sprite(config.x, config.y, key);
     this.sprite.setData("spaceObject", this);
 
-    const vx = (Math.random() - 0.5) * 20;
-    const vy = (Math.random() - 0.5) * 20;
+    const vx = config.velocityX ?? 0;
+    const vy = config.velocityY ?? 0;
     this.sprite.setVelocity(vx, vy);
   }
 
