@@ -10,7 +10,7 @@ export type InputType = "keyboard" | "gamepad";
  * Bindings:
  *   Move:   WASD / Arrow keys  |  Left stick
  *   Burst:  Space / J          |  A (button 0)
- *   Boost:  Shift              |  LB (button 4)
+ *   Boost:  Shift              |  RB (button 7)
  */
 export class InputManager {
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -45,7 +45,9 @@ export class InputManager {
       scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.J),
     ];
-    this.boostKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+    this.boostKey = scene.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SHIFT,
+    );
 
     // Keyboard activity → mark as keyboard
     scene.input.keyboard!.on("keydown", () => {
@@ -54,16 +56,22 @@ export class InputManager {
 
     // Gamepad
     if (scene.input.gamepad) {
-      scene.input.gamepad.once("connected", (pad: Phaser.Input.Gamepad.Gamepad) => {
-        this.pad = pad;
-        this._lastInputType = "gamepad";
-      });
+      scene.input.gamepad.once(
+        "connected",
+        (pad: Phaser.Input.Gamepad.Gamepad) => {
+          this.pad = pad;
+          this._lastInputType = "gamepad";
+        },
+      );
       scene.input.gamepad.on(
         "down",
-        (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
+        (
+          _pad: Phaser.Input.Gamepad.Gamepad,
+          button: Phaser.Input.Gamepad.Button,
+        ) => {
           this._lastInputType = "gamepad";
           if (button.index === 0) this._attackJustPressed = true;
-        }
+        },
       );
     }
   }
@@ -81,7 +89,7 @@ export class InputManager {
     }
 
     // Keyboard attack keys
-    if (this.attackKeys.some(k => Phaser.Input.Keyboard.JustDown(k))) {
+    if (this.attackKeys.some((k) => Phaser.Input.Keyboard.JustDown(k))) {
       this._attackJustPressed = true;
       this._lastInputType = "keyboard";
     }
@@ -123,14 +131,20 @@ export class InputManager {
     return pressed;
   }
 
-  /** True while boost is held (Shift or gamepad LB). */
+  /** True while boost is held (Shift or gamepad RB). */
   get isBoostHeld(): boolean {
-    return this.boostKey.isDown || (this.pad?.buttons[4]?.pressed ?? false);
+    return this.boostKey.isDown || (this.pad?.buttons[7]?.pressed ?? false);
   }
 
   // ── Input type ────────────────────────────────────────────────────
 
-  get lastInputType(): InputType { return this._lastInputType; }
-  get isGamepad(): boolean { return this._lastInputType === "gamepad"; }
-  get isKeyboard(): boolean { return this._lastInputType === "keyboard"; }
+  get lastInputType(): InputType {
+    return this._lastInputType;
+  }
+  get isGamepad(): boolean {
+    return this._lastInputType === "gamepad";
+  }
+  get isKeyboard(): boolean {
+    return this._lastInputType === "keyboard";
+  }
 }
