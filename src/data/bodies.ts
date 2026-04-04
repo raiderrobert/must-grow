@@ -39,7 +39,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Earth ─────────────────────────────────────────────────────────
   {
     name: "Earth",
-    distance: 240_000, angle: Math.PI / 2,
+    distance: 25_000, angle: Math.PI / 2,
     visualRadius: 3_000, killRadius: 3_000,
     color: 0x1a4a8a, gravityMass: 500,
     health: 100_000, massYield: 50_000, energyYield: 10_000,
