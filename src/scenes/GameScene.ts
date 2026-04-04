@@ -51,6 +51,13 @@ export class GameScene extends Phaser.Scene {
       gravityMass: 500,
     });
 
+    // The Sun — far from start at the top of the solar system
+    this.gravity.addBody({
+      x: WORLD_WIDTH / 2,
+      y: WORLD_HEIGHT / 2 - 3500,
+      gravityMass: 50000,
+    });
+
     this.gravity.initGraphics(this);
 
     this.combat = new CombatSystem(this, this.player, this.resources, this.zones);

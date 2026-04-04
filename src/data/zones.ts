@@ -145,4 +145,61 @@ export const ZONES: ZoneDefinition[] = [
       },
     ],
   },
+  {
+    name: "Kuiper Belt",
+    minDistance: 5500,
+    maxDistance: 7000,
+    maxObjects: 10,
+    spawnTable: [
+      {
+        weight: 5,
+        minTier: 4,
+        factory: () => ({
+          size: 10 + Math.random() * 12,
+          health: 50,
+          massYield: 20,
+          energyYield: 8,
+          gravityMass: 0,
+          color: 0xccddff,
+          chewClicks: 10,
+        }),
+      },
+      {
+        weight: 1,
+        minTier: 4,
+        factory: () => ({
+          size: 25,
+          health: 150,
+          massYield: 80,
+          energyYield: 20,
+          gravityMass: 50,
+          color: 0xddccaa,
+          name: "Pluto",
+          chewClicks: 20,
+        }),
+      },
+    ],
+  },
+  {
+    name: "Solar Core",
+    minDistance: 7000,
+    maxDistance: 8000,
+    maxObjects: 1,
+    spawnTable: [
+      {
+        weight: 1,
+        minTier: 5,
+        factory: () => ({
+          size: 200,
+          health: 10000,
+          massYield: 50000,
+          energyYield: 10000,
+          gravityMass: 50000,
+          color: 0xffdd44,
+          name: "The Sun",
+          chewClicks: 999,
+        }),
+      },
+    ],
+  },
 ];
