@@ -1,107 +1,57 @@
-import {
-  STARTING_MASS,
-  STARTING_ENERGY,
-  STARTING_BATTERY_CAPACITY,
-  ENERGY_PER_MANUAL_CLICK,
-} from "@/constants";
+export const PASSIVE_RECHARGE_RATE = 8; // energy/sec
+export const BASE_KILL_RECHARGE = 5;
+export const BURST_ENERGY_COST = 15;
+export const BOOST_ENERGY_COST_PER_SEC = 8;
 
 export class ResourceManager {
-  mass: number = STARTING_MASS;
+  mass: number = 0;
   totalMassEarned: number = 0;
+  energy: number = 100;
+  batteryCapacity: number = 100;
 
-  energy: number = STARTING_ENERGY;
-  batteryCapacity: number = STARTING_BATTERY_CAPACITY;
-
-  generationRate: number = 0;     // energy/sec from always-on sources (solar panels, stellar harvester)
-  massFuelGenerationRate: number = 0; // energy/sec from reactor — only when mass fuel is available
-  drainRate: number = 0;          // energy/sec consumed by active systems
-  massDrainRate: number = 0;      // mass consumed per second (fusion reactor fuel)
-
-  manualGenerateAmount: number = ENERGY_PER_MANUAL_CLICK;
+  // Upgradeable values (modified by card picks)
+  passiveRechargeRate: number = PASSIVE_RECHARGE_RATE;
+  killRechargeBonus: number = BASE_KILL_RECHARGE;
+  burstCost: number = BURST_ENERGY_COST;
+  boostCostPerSec: number = BOOST_ENERGY_COST_PER_SEC;
+  massMultiplier: number = 1.0;
 
   addMass(amount: number): void {
-    this.mass += amount;
-    this.totalMassEarned += amount;
+    const gained = amount * this.massMultiplier;
+    this.mass += gained;
+    this.totalMassEarned += gained;
   }
 
-  spendMass(cost: number): boolean {
-    if (this.mass < cost) return false;
-    this.mass -= cost;
+  onKill(): void {
+    this.energy = Math.min(this.batteryCapacity, this.energy + this.killRechargeBonus);
+  }
+
+  /** Returns true if there was enough energy. */
+  spendBurst(): boolean {
+    if (this.energy < this.burstCost) return false;
+    this.energy -= this.burstCost;
     return true;
   }
 
-  addEnergy(amount: number): void {
-    this.energy = Math.min(this.energy + amount, this.batteryCapacity);
+  /** Drains boost energy for deltaMs milliseconds. Returns whether boost was active. */
+  drainBoost(deltaMs: number): boolean {
+    const cost = this.boostCostPerSec * (deltaMs / 1000);
+    if (this.energy < cost) return false;
+    this.energy -= cost;
+    return true;
   }
 
-  drainEnergy(amount: number): void {
-    this.energy = Math.max(this.energy - amount, 0);
-  }
-
-  manualGenerate(): void {
-    this.addEnergy(this.manualGenerateAmount);
-  }
-
-  /** Call each frame with delta in milliseconds. */
-  updateEnergy(deltaMs: number): void {
-    const deltaSec = deltaMs / 1000;
-    const net = this.netEnergyRate * deltaSec;
-    if (net >= 0) {
-      this.addEnergy(net);
-    } else {
-      this.drainEnergy(Math.abs(net));
-    }
-    // Reactor: only generates energy when mass fuel is available
-    if (this.massDrainRate > 0 && this.massFuelGenerationRate > 0) {
-      const massCost = this.massDrainRate * deltaSec;
-      if (this.mass >= massCost) {
-        this.mass -= massCost;
-        this.addEnergy(this.massFuelGenerationRate * deltaSec);
-      }
-      // No mass → no reactor energy
-    }
-  }
-
-  get netEnergyRate(): number {
-    return this.generationRate - this.drainRate;
+  /** Call each frame — passive recharge. */
+  update(deltaMs: number): void {
+    const regen = this.passiveRechargeRate * (deltaMs / 1000);
+    this.energy = Math.min(this.batteryCapacity, this.energy + regen);
   }
 
   get energyRatio(): number {
     return this.batteryCapacity > 0 ? this.energy / this.batteryCapacity : 0;
   }
 
-  get isPowerDead(): boolean {
-    return this.energy <= 0;
-  }
-
-  /** Systems ordered by shutdown priority (first to go offline). */
-  static readonly SHUTDOWN_ORDER = [
-    "gravityWell",
-    "drones",
-    "tractorBeam",
-    "autoTurrets",
-    "shields",
-    "engines",
-  ] as const;
-
-  /** Energy ratio thresholds where each system shuts down. */
-  private static readonly SHUTDOWN_THRESHOLDS: Record<string, number> = {
-    gravityWell: 0.25,
-    drones: 0.20,
-    tractorBeam: 0.15,
-    autoTurrets: 0.10,
-    shields: 0.05,
-    engines: 0.0,
-  };
-
-  isSystemOnline(system: string): boolean {
-    const threshold = ResourceManager.SHUTDOWN_THRESHOLDS[system] ?? 0;
-    return this.energyRatio > threshold;
-  }
-
-  get activeShutdowns(): readonly string[] {
-    return ResourceManager.SHUTDOWN_ORDER.filter(
-      (s) => !this.isSystemOnline(s)
-    );
+  get canBurst(): boolean {
+    return this.energy >= this.burstCost;
   }
 }
