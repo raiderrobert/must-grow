@@ -140,11 +140,11 @@ export class GameScene extends Phaser.Scene {
     // UpgradeScreen overlay: tell it to use uiCam (ignore from main)
     this.upgradeScreen.setMainCamera(this.cameras.main);
 
-    // Spawn player well above Earth's surface (Earth surface ≈ WORLD_CENTER_Y + 200)
-    this.player.body.setPosition(WORLD_CENTER_X, WORLD_CENTER_Y - 5_000);
+    // Spawn player just above Earth's surface (surface ≈ WORLD_CENTER_Y + 200)
+    this.player.body.setPosition(WORLD_CENTER_X, WORLD_CENTER_Y - 500);
 
-    // Start zoomed in so player looks small next to Earth
-    this.cameras.main.setZoom(4.0);
+    // Starting zoom: keeps player ~6px on screen, Earth arc visible at bottom
+    this.cameras.main.setZoom(0.75);
   }
 
   update(_time: number, delta: number): void {
@@ -205,7 +205,8 @@ export class GameScene extends Phaser.Scene {
     const growthFactor = 1 + Math.log2(1 + this.resources.totalMassEarned) * 0.5;
     this.player.setSize(PLAYER_START_SIZE * growthFactor);
 
-    const targetZoom = Math.max(4.0 / growthFactor, 0.05);
+    // Keep player ~6px on screen regardless of size; zoom out as station grows
+    const targetZoom = Math.max(0.75 / growthFactor, 0.02);
     const currentZoom = this.cameras.main.zoom;
     const lerpFactor = 1 - Math.exp(-1.5 * (delta / 1000));
     this.cameras.main.setZoom(currentZoom + (targetZoom - currentZoom) * lerpFactor);
