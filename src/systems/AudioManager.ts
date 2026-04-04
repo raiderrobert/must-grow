@@ -1,11 +1,14 @@
 import Phaser from "phaser";
+import { MusicSystem } from "@/systems/MusicSystem";
 
 export class AudioManager {
   private scene: Phaser.Scene;
   private muted: boolean = false;
+  readonly music: MusicSystem;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.music = new MusicSystem();
   }
 
   play(key: string, volumeScale: number = 1): void {
@@ -30,6 +33,7 @@ export class AudioManager {
   toggleMute(): boolean {
     this.muted = !this.muted;
     this.scene.sound.mute = this.muted;
+    this.music.setMuted(this.muted);
     return this.muted;
   }
 

@@ -70,6 +70,11 @@ export class GameScene extends Phaser.Scene {
 
     this.combat.setAudio(this.audio);
 
+    // Start ambient music (resumes after first user gesture)
+    this.input.once("pointerdown", () => {
+      this.audio.music.play("ambient");
+    });
+
     // Apply initial stats (level 0 defaults)
     this.upgrades.applyEffects(this.player, this.combat, this.resources);
 
@@ -132,6 +137,7 @@ export class GameScene extends Phaser.Scene {
     const newTier = getTierForMass(this.resources.totalMassEarned);
     if (newTier > this.currentTier) {
       this.triggerEvolution(newTier);
+      this.audio.music.onTierChange(newTier);
     }
     this.currentTier = newTier;
     this.player.tier = newTier;
