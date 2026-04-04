@@ -25,6 +25,8 @@ export class GameScene extends Phaser.Scene {
   audio!: AudioManager;
   currentTier: number = 1;
   private starfieldLayers!: Phaser.GameObjects.TileSprite[];
+  private gravityIndicatorGraphics!: Phaser.GameObjects.Graphics;
+  private dangerVignette!: Phaser.GameObjects.Graphics;
   private collisionCooldowns: WeakSet<Phaser.Physics.Arcade.Sprite> = new WeakSet();
 
   constructor() {
@@ -163,12 +165,85 @@ export class GameScene extends Phaser.Scene {
     // 8. Starfield parallax
     updateStarfield(this.starfieldLayers, this.cameras.main);
 
-    // 9. Danger zones
+    // 9. Danger zones + indicators
     this.gravity.renderDangerZones(
       this.player.x,
       this.player.y,
       this.player.thrustPower
     );
+    this.updateGravityIndicator();
+    this.updateDangerVignette();
+  }
+
+  private updateGravityIndicator(): void {
+    this.gravityIndicatorGraphics.clear();
+    const pull = this.gravity.calculateTotalPull(this.player.x, this.player.y);
+    if (pull.magnitude < 0.1) return;
+
+    const nx = pull.x / pull.magnitude;
+    const ny = pull.y / pull.magnitude;
+
+    let color = 0x4488cc;
+    let alpha = 0.6;
+    let arrowLength = 20;
+
+    for (const body of this.gravity.getBodies()) {
+      const level = this.gravity.getDangerLevel(
+        body, this.player.x, this.player.y, this.player.thrustPower
+      );
+      if (level === "deadly") {
+        color = 0xff4444; alpha = 1.0; arrowLength = 28; break;
+      } else if (level === "warning") {
+        color = 0xffaa44; alpha = 0.85; arrowLength = 24;
+      }
+    }
+
+    const startDist = this.player.size + 4;
+    const sx = this.player.x + nx * startDist;
+    const sy = this.player.y + ny * startDist;
+    const ex = sx + nx * arrowLength;
+    const ey = sy + ny * arrowLength;
+
+    this.gravityIndicatorGraphics.lineStyle(2, color, alpha);
+    this.gravityIndicatorGraphics.lineBetween(sx, sy, ex, ey);
+
+    const headSize = 5;
+    const angle = Math.atan2(ny, nx);
+    const spread = Math.PI * 0.7;
+    this.gravityIndicatorGraphics.fillStyle(color, alpha);
+    this.gravityIndicatorGraphics.fillTriangle(
+      ex, ey,
+      ex - Math.cos(angle - spread) * headSize, ey - Math.sin(angle - spread) * headSize,
+      ex - Math.cos(angle + spread) * headSize, ey - Math.sin(angle + spread) * headSize
+    );
+  }
+
+  private updateDangerVignette(): void {
+    this.dangerVignette.clear();
+
+    let worstLevel: import("@/systems/GravitySystem").DangerLevel = "safe";
+    for (const body of this.gravity.getBodies()) {
+      const level = this.gravity.getDangerLevel(
+        body, this.player.x, this.player.y, this.player.thrustPower
+      );
+      if (level === "deadly") { worstLevel = "deadly"; break; }
+      if (level === "warning") worstLevel = "warning";
+    }
+    if (worstLevel === "safe") return;
+
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const pulse = (Math.sin(this.time.now / (worstLevel === "deadly" ? 150 : 400)) + 1) / 2;
+    const baseAlpha = worstLevel === "deadly" ? 0.25 : 0.10;
+    const alpha = baseAlpha + pulse * (worstLevel === "deadly" ? 0.15 : 0.06);
+    const color = worstLevel === "deadly" ? 0xff2222 : 0xff8800;
+
+    const edgeSize = Math.floor(Math.min(w, h) * 0.12);
+    this.dangerVignette.fillStyle(color, alpha);
+    this.dangerVignette.fillRect(0, 0, w, edgeSize);
+    this.dangerVignette.fillRect(0, h - edgeSize, w, edgeSize);
+    this.dangerVignette.fillRect(0, 0, edgeSize, h);
+    this.dangerVignette.fillRect(w - edgeSize, 0, edgeSize, h);
   }
 
   private renderEarth(): void {
