@@ -24,6 +24,7 @@ export class GameScene extends Phaser.Scene {
   shop!: UpgradeShop;
   audio!: AudioManager;
   currentTier: number = 1;
+  private collisionCooldowns: WeakSet<Phaser.Physics.Arcade.Sprite> = new WeakSet();
 
   constructor() {
     super({ key: "GameScene" });
@@ -174,6 +175,12 @@ export class GameScene extends Phaser.Scene {
 
   // Exposed for collision handler (wired later)
   onCollision(obj: SpaceObject): void {
+    if (this.collisionCooldowns.has(obj.sprite)) return;
+    this.collisionCooldowns.add(obj.sprite);
+    this.time.delayedCall(500, () => {
+      this.collisionCooldowns.delete(obj.sprite);
+    });
+
     const sizeRatio = obj.config.size / this.player.size;
 
     if (sizeRatio < 0.3) {
