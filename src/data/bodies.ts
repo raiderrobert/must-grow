@@ -21,7 +21,7 @@ export const BODY_DEFS: BodyDef[] = [
     name: "Sun",
     distance: 0, angle: 0,
     visualRadius: 25_000, killRadius: 25_000,
-    color: 0xffdd00, gravityMass: 50_000,
+    color: 0xffdd00, gravityMass: 500_000,
     health: 500_000, massYield: 200_000, energyYield: 50_000,
     visual: [
       { type: "corona", layers: [
@@ -41,7 +41,7 @@ export const BODY_DEFS: BodyDef[] = [
     name: "Earth",
     distance: 105_000, angle: Math.PI / 2,
     visualRadius: 3_000, killRadius: 3_000,
-    color: 0x1a4a8a, gravityMass: 500,
+    color: 0x1a4a8a, gravityMass: 50_000,
     health: 100_000, massYield: 50_000, energyYield: 10_000,
     visual: [
       { type: "atmosphereGlow", layers: [
@@ -66,7 +66,7 @@ export const BODY_DEFS: BodyDef[] = [
     name: "Mercury",
     distance: 75_000, angle: 0.8,
     visualRadius: 400, killRadius: 400,
-    color: 0x9b8b78, gravityMass: 800,
+    color: 0x9b8b78, gravityMass: 20_000,
     health: 2_000, massYield: 800, energyYield: 200,
     visual: [
       { type: "atmosphereGlow", layers: [{ radiusMult: 1.15, color: 0x7a6b5c, alpha: 0.15 }]},
@@ -87,7 +87,7 @@ export const BODY_DEFS: BodyDef[] = [
     name: "Venus",
     distance: 90_000, angle: 2.1,
     visualRadius: 900, killRadius: 900,
-    color: 0xe8b84b, gravityMass: 2_000,
+    color: 0xe8b84b, gravityMass: 40_000,
     health: 5_000, massYield: 2_000, energyYield: 500,
     visual: [
       { type: "atmosphereGlow", layers: [
@@ -111,7 +111,7 @@ export const BODY_DEFS: BodyDef[] = [
     name: "Mars",
     distance: 120_000, angle: 3.9,
     visualRadius: 700, killRadius: 700,
-    color: 0xc1440e, gravityMass: 1_200,
+    color: 0xc1440e, gravityMass: 30_000,
     health: 3_000, massYield: 1_200, energyYield: 300,
     visual: [
       { type: "atmosphereGlow", layers: [{ radiusMult: 1.15, color: 0xa03308, alpha: 0.15 }]},
@@ -129,7 +129,7 @@ export const BODY_DEFS: BodyDef[] = [
     name: "Jupiter",
     distance: 150_000, angle: 1.2,
     visualRadius: 8_000, killRadius: 8_000,
-    color: 0xc88b3a, gravityMass: 20_000,
+    color: 0xc88b3a, gravityMass: 200_000,
     health: 50_000, massYield: 20_000, energyYield: 5_000,
     visual: [
       { type: "atmosphereGlow", layers: [{ radiusMult: 1.15, color: 0xaa7230, alpha: 0.15 }]},
@@ -155,7 +155,7 @@ export const BODY_DEFS: BodyDef[] = [
     name: "Saturn",
     distance: 170_000, angle: 4.5,
     visualRadius: 6_500, killRadius: 6_500,
-    color: 0xe4d090, gravityMass: 16_000,
+    color: 0xe4d090, gravityMass: 150_000,
     health: 40_000, massYield: 16_000, energyYield: 4_000,
     visual: [
       { type: "atmosphereGlow", layers: [{ radiusMult: 1.15, color: 0xc8b86a, alpha: 0.15 }]},
@@ -180,7 +180,7 @@ export const BODY_DEFS: BodyDef[] = [
     name: "Uranus",
     distance: 185_000, angle: 0.3,
     visualRadius: 3_500, killRadius: 3_500,
-    color: 0x7de8e8, gravityMass: 10_000,
+    color: 0x7de8e8, gravityMass: 80_000,
     health: 25_000, massYield: 10_000, energyYield: 2_500,
     visual: [
       { type: "atmosphereGlow", layers: [{ radiusMult: 1.15, color: 0x5cc8c8, alpha: 0.15 }]},
@@ -199,7 +199,7 @@ export const BODY_DEFS: BodyDef[] = [
     name: "Neptune",
     distance: 195_000, angle: 2.8,
     visualRadius: 3_200, killRadius: 3_200,
-    color: 0x3f54ba, gravityMass: 9_000,
+    color: 0x3f54ba, gravityMass: 70_000,
     health: 22_000, massYield: 9_000, energyYield: 2_200,
     visual: [
       { type: "atmosphereGlow", layers: [{ radiusMult: 1.15, color: 0x2d3d9a, alpha: 0.15 }]},
