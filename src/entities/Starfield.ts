@@ -1,13 +1,18 @@
 import Phaser from "phaser";
-import { WORLD_WIDTH, WORLD_HEIGHT, COLORS } from "@/constants";
+import { COLORS } from "@/constants";
 
-/** Creates parallax starfield layers drawn to static textures. */
-export function createStarfield(scene: Phaser.Scene): Phaser.GameObjects.Image[] {
-  const layers: Phaser.GameObjects.Image[] = [];
+/** Creates parallax starfield using small tiled textures (512x512 each). */
+export function createStarfield(
+  scene: Phaser.Scene
+): Phaser.GameObjects.TileSprite[] {
+  const layers: Phaser.GameObjects.TileSprite[] = [];
+  const { width, height } = scene.scale;
+  const tileSize = 512;
+
   const layerConfigs = [
-    { count: 200, size: 1, alpha: 0.3, scrollFactor: 0.1 },
-    { count: 150, size: 1.5, alpha: 0.5, scrollFactor: 0.3 },
-    { count: 100, size: 2, alpha: 0.8, scrollFactor: 0.6 },
+    { count: 40, size: 1, alpha: 0.3, scrollFactor: 0.1 },
+    { count: 30, size: 1.5, alpha: 0.5, scrollFactor: 0.3 },
+    { count: 20, size: 2, alpha: 0.8, scrollFactor: 0.6 },
   ];
 
   for (const [i, config] of layerConfigs.entries()) {
@@ -16,19 +21,32 @@ export function createStarfield(scene: Phaser.Scene): Phaser.GameObjects.Image[]
     graphics.fillStyle(COLORS.starfield, config.alpha);
 
     for (let s = 0; s < config.count; s++) {
-      const x = Math.random() * WORLD_WIDTH;
-      const y = Math.random() * WORLD_HEIGHT;
+      const x = Math.random() * tileSize;
+      const y = Math.random() * tileSize;
       graphics.fillCircle(x, y, config.size);
     }
 
-    graphics.generateTexture(key, WORLD_WIDTH, WORLD_HEIGHT);
+    graphics.generateTexture(key, tileSize, tileSize);
     graphics.destroy();
 
-    const image = scene.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, key);
-    image.setScrollFactor(config.scrollFactor);
-    image.setDepth(-10 + i);
-    layers.push(image);
+    const tile = scene.add.tileSprite(width / 2, height / 2, width, height, key);
+    tile.setScrollFactor(0); // manually scrolled via tilePosition
+    tile.setDepth(-10 + i);
+    tile.setData("parallaxFactor", config.scrollFactor);
+    layers.push(tile);
   }
 
   return layers;
+}
+
+/** Call each frame to update parallax based on camera position. */
+export function updateStarfield(
+  layers: Phaser.GameObjects.TileSprite[],
+  camera: Phaser.Cameras.Scene2D.Camera
+): void {
+  for (const layer of layers) {
+    const factor = layer.getData("parallaxFactor") as number;
+    layer.tilePositionX = camera.scrollX * factor;
+    layer.tilePositionY = camera.scrollY * factor;
+  }
 }

@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { WORLD_WIDTH, WORLD_HEIGHT, COLORS } from "@/constants";
-import { createStarfield } from "@/entities/Starfield";
+import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
 import { UpgradeManager } from "@/systems/UpgradeManager";
@@ -24,6 +24,7 @@ export class GameScene extends Phaser.Scene {
   shop!: UpgradeShop;
   audio!: AudioManager;
   currentTier: number = 1;
+  private starfieldLayers!: Phaser.GameObjects.TileSprite[];
   private collisionCooldowns: WeakSet<Phaser.Physics.Arcade.Sprite> = new WeakSet();
 
   constructor() {
@@ -35,7 +36,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-    createStarfield(this);
+    this.starfieldLayers = createStarfield(this);
 
     this.resources = new ResourceManager();
     this.upgrades = new UpgradeManager(this.resources);
@@ -125,7 +126,10 @@ export class GameScene extends Phaser.Scene {
     // 7. HUD
     this.hud.update();
 
-    // 8. Danger zones
+    // 8. Starfield parallax
+    updateStarfield(this.starfieldLayers, this.cameras.main);
+
+    // 9. Danger zones
     this.gravity.renderDangerZones(
       this.player.x,
       this.player.y,
