@@ -42,7 +42,7 @@ export class HUD {
 
     if (audio) {
       const muteBtn = scene.add
-        .text(scene.scale.width - 40, scene.scale.height - 40, "🔊", {
+        .text(scene.scale.width - 40, scene.scale.height - 175, "🔊", {
           fontFamily: "monospace",
           fontSize: "20px",
         })
