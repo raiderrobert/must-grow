@@ -93,11 +93,7 @@ export class GameScene extends Phaser.Scene {
         const debris = (debrisSprite as Phaser.Physics.Arcade.Sprite).getData(
           "debris"
         ) as import("@/entities/Debris").Debris;
-        if (!debris) return;
-        this.resources.addMass(debris.mass);
-        this.resources.addEnergy(debris.energy);
-        this.audio.playWithVariation("sfx_pickup");
-        debris.destroy();
+        if (debris) this.combat.collectDebris(debris);
       }
     );
   }

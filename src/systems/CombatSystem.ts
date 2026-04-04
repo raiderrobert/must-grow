@@ -235,7 +235,7 @@ export class CombatSystem {
     }
   }
 
-  private collectDebris(debris: Debris): void {
+  collectDebris(debris: Debris): void {
     this.resources.addMass(debris.mass);
     this.resources.addEnergy(debris.energy);
     this.audio?.playWithVariation("sfx_pickup");
