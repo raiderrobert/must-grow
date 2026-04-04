@@ -21,6 +21,8 @@ export class PlayerStation {
   };
   private thrustEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
 
+  isLocked: boolean = false;
+
   // Stats (modified by upgrades)
   speed: number = PLAYER_BASE_SPEED;
   thrustPower: number = 50;
@@ -115,6 +117,12 @@ export class PlayerStation {
   }
 
   update(_delta: number): void {
+    if (this.isLocked) {
+      this.body.setAccelerationX(0);
+      this.body.setAccelerationY(0);
+      if (this.thrustEmitter) this.thrustEmitter.emitting = false;
+      return;
+    }
     const accel = this.speed * 3;
 
     // Horizontal

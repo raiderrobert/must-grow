@@ -83,7 +83,8 @@ export class GameScene extends Phaser.Scene {
       this.handleDeath();
     }
 
-    // 3. Player movement
+    // 3. Player movement (lock while clamped)
+    this.player.isLocked = this.combat.clampedTarget !== null;
     this.player.update(delta);
 
     // 3. Combat (manual + auto)
