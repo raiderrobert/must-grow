@@ -99,7 +99,7 @@ export class PlayerStation {
     const mx = this.input.moveX;
     const my = this.input.moveY;
     const boostMult = this.isBoosting ? 2.0 : 1.0;
-    const accel = this.speed * boostMult;
+    const accel = this.speed * 8 * boostMult;
 
     this.body.setAccelerationX(mx !== 0 ? Math.sign(mx) * accel * Math.abs(mx) : 0);
     this.body.setAccelerationY(my !== 0 ? Math.sign(my) * accel * Math.abs(my) : 0);

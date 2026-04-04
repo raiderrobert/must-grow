@@ -5,7 +5,7 @@ export const EARTH_GRAVITY_PULL = 30; // constant downward pull in Tier 1 (pixel
 // Player
 export const PLAYER_START_X = 400;
 export const PLAYER_START_Y = 300;
-export const PLAYER_THRUST_POWER = 40;  // reduced — taps adjust orbit, boost escapes
+export const PLAYER_THRUST_POWER = 600;
 export const PLAYER_BASE_THRUST = 50; // base upward thrust against gravity
 export const PLAYER_START_SIZE = 8;
 
