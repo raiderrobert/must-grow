@@ -1,6 +1,5 @@
 // Physics
 export const GRAVITY_CONSTANT = 250;
-export const EARTH_GRAVITY_MASS = 500;
 export const EARTH_GRAVITY_PULL = 30; // constant downward pull in Tier 1 (pixels/sec²)
 
 // Player
