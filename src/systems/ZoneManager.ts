@@ -24,16 +24,9 @@ export class ZoneManager {
     playerX: number,
     playerY: number,
     playerTier: number,
-    playerMass: number = 0
+    playerSize: number = 8
   ): void {
     this.spawnTimer += delta;
-
-    // Heal gravity bodies each frame
-    for (const obj of this.objects) {
-      if (obj.sprite.active) {
-        obj.updateHealing(delta, playerMass);
-      }
-    }
 
     if (this.spawnTimer < this.spawnInterval) return;
     this.spawnTimer = 0;

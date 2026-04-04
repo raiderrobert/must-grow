@@ -179,7 +179,7 @@ export class GameScene extends Phaser.Scene {
 
     // Zone spawning
     const tier = getTierForMass(this.resources.totalMassEarned);
-    this.zones.update(delta, this.player.x, this.player.y, tier, this.resources.totalMassEarned);
+    this.zones.update(delta, this.player.x, this.player.y, tier, this.player.size);
 
     // Energy passive regen
     this.resources.update(delta);

@@ -7,12 +7,9 @@ export interface SpaceObjectConfig {
   health: number;
   massYield: number;
   energyYield: number;
-  gravityMass: number; // 0 for asteroids, large for planets
+  gravityMass: number;
   color: number;
-  name?: string; // for named objects like "Mars"
-  chewClicks?: number; // clicks to consume via clamping (Tier 1)
-  bindingMassThreshold?: number;
-  healRate?: number;
+  name?: string;
   /** Radius within which the player damages this object by proximity. 0 = laser only. */
   biteRadius?: number;
 }
@@ -21,32 +18,24 @@ export class SpaceObject {
   sprite: Phaser.Physics.Arcade.Sprite;
   config: SpaceObjectConfig;
   health: number;
-  chewClicksRemaining: number;
-  isBeingChewed: boolean = false;
-  bindingMassThreshold: number;
-  healRate: number;
+  readonly maxHealth: number;
+  isBeingChewed: boolean = false; // kept for compatibility
 
   private scene: Phaser.Scene;
+  private damageOverlay?: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene, config: SpaceObjectConfig) {
     this.scene = scene;
     this.config = config;
     this.health = config.health;
-    this.chewClicksRemaining =
-      config.chewClicks ?? Math.ceil(config.health / 10);
-    this.bindingMassThreshold =
-      config.bindingMassThreshold ?? config.gravityMass * 0.5;
-    this.healRate =
-      config.healRate ??
-      (config.gravityMass > 0 ? config.health * 0.05 : 0);
+    this.maxHealth = config.health;
 
-    // Generate circle texture
     const key = `space_obj_${config.color}_${Math.round(config.size)}`;
     if (!scene.textures.exists(key)) {
       const g = scene.add.graphics();
       g.fillStyle(config.color, 1);
       g.fillCircle(config.size, config.size, config.size);
-      g.lineStyle(1, 0xffffff, 0.2);
+      g.lineStyle(Math.max(1, config.size * 0.02), 0xffffff, 0.2);
       g.strokeCircle(config.size, config.size, config.size);
       g.generateTexture(key, config.size * 2, config.size * 2);
       g.destroy();
@@ -55,46 +44,61 @@ export class SpaceObject {
     this.sprite = scene.physics.add.sprite(config.x, config.y, key);
     this.sprite.setData("spaceObject", this);
 
-    // Slight random drift
     const vx = (Math.random() - 0.5) * 20;
     const vy = (Math.random() - 0.5) * 20;
     this.sprite.setVelocity(vx, vy);
   }
 
   takeDamage(amount: number): boolean {
-    this.health -= amount;
-    // Flash white briefly
+    this.health = Math.max(0, this.health - amount);
     this.sprite.setTint(0xffffff);
     this.scene.time.delayedCall(50, () => {
-      if (this.sprite.active) this.sprite.clearTint();
+      if (this.sprite.active) {
+        this.sprite.clearTint();
+        this.updateDamageVisual();
+      }
     });
     return this.health <= 0;
   }
 
-  /** Returns mass per chew click. */
-  chew(): { mass: number; energy: number; depleted: boolean } {
-    this.chewClicksRemaining--;
-    const totalClicks = this.config.chewClicks ?? 1;
-    const massPerChew = this.config.massYield / totalClicks;
-    const energyPerChew = this.config.energyYield / totalClicks;
-    return {
-      mass: massPerChew,
-      energy: energyPerChew,
-      depleted: this.chewClicksRemaining <= 0,
-    };
+  private updateDamageVisual(): void {
+    const ratio = this.health / this.maxHealth;
+    if (ratio > 0.75) return;
+
+    if (!this.damageOverlay) {
+      this.damageOverlay = this.scene.add.graphics().setDepth(2);
+    }
+    this.damageOverlay.clear();
+
+    const x = this.sprite.x;
+    const y = this.sprite.y;
+    const r = this.config.size;
+    const crackAlpha = 1 - ratio;
+    this.damageOverlay.lineStyle(Math.max(1, r * 0.03), 0xff4400, crackAlpha * 0.8);
+
+    const crackCount = Math.floor((1 - ratio) * 6) + 1;
+    const seed = this.config.x * 1000 + this.config.y;
+    for (let i = 0; i < crackCount; i++) {
+      const a = ((seed * (i + 1) * 137.5) % 360) * (Math.PI / 180);
+      const len = r * (0.5 + ((seed * (i + 3)) % 50) / 100);
+      this.damageOverlay.lineBetween(x, y, x + Math.cos(a) * len, y + Math.sin(a) * len);
+    }
   }
 
-  updateHealing(delta: number, playerMass: number): void {
-    if (this.bindingMassThreshold <= 0) return;
-    if (playerMass >= this.bindingMassThreshold) return;
-    if (this.health >= this.config.health) return;
-    this.health = Math.min(
-      this.health + this.healRate * (delta / 1000),
-      this.config.health
-    );
+  get healthRatio(): number {
+    return this.health / this.maxHealth;
+  }
+
+  /** Returns true if the player is close enough to bite this object. */
+  isInBiteRange(playerX: number, playerY: number, playerSize: number): boolean {
+    const biteRadius = this.config.biteRadius ?? 0;
+    if (biteRadius === 0) return false;
+    const dist = Phaser.Math.Distance.Between(playerX, playerY, this.sprite.x, this.sprite.y);
+    return dist < biteRadius + playerSize;
   }
 
   destroy(): void {
+    this.damageOverlay?.destroy();
     this.sprite.destroy();
   }
 }

@@ -22,7 +22,7 @@ export class CombatSystem {
   private autoFireTimer: number = 0;
 
   // Burst fire state
-  private burstCooldown: number = 0;
+  burstCooldown: number = 0;
   private burstQueue: number = 0;
   private burstFireTimer: number = 0;
   private readonly BURST_FIRE_INTERVAL = 80; // ms between shots in a burst
@@ -269,11 +269,50 @@ export class CombatSystem {
     }
   }
 
+  /** Deals damage to any object the player is inside bite range of. */
+  updateBiteDamage(delta: number): void {
+    const biteRate = 200; // damage per second
+    for (const obj of this.zones.getObjects()) {
+      if (!obj.isInBiteRange(this.player.x, this.player.y, this.player.size)) continue;
+
+      const dmg = biteRate * (delta / 1000);
+      const destroyed = obj.takeDamage(dmg);
+
+      // Bite feedback particles
+      if (Math.random() < 0.3) {
+        const angle = Phaser.Math.Angle.Between(obj.sprite.x, obj.sprite.y, this.player.x, this.player.y);
+        const cx = obj.sprite.x + Math.cos(angle) * obj.config.size;
+        const cy = obj.sprite.y + Math.sin(angle) * obj.config.size;
+        const particles = this.scene.add.particles(cx, cy, "particle", {
+          speed: { min: 80, max: 200 },
+          scale: { start: 0.8, end: 0 },
+          tint: obj.config.color,
+          lifespan: 300,
+          quantity: 3,
+          emitting: false,
+        });
+        particles.explode(3);
+        this.scene.time.delayedCall(400, () => particles.destroy());
+      }
+
+      if (destroyed) {
+        this.audio?.play("sfx_explosion");
+        this.createExplosion(obj.sprite.x, obj.sprite.y, obj.config.color);
+        this.spawnDebris(obj);
+        this.resources.addMass(obj.config.massYield);
+        this.resources.onKill();
+        this.zones.removeObject(obj);
+        this.scene.cameras.main.shake(600, 0.008);
+      }
+    }
+  }
+
   update(delta: number, droneCount: number = 0): void {
     if (this.burstCooldown > 0) this.burstCooldown -= delta;
 
     this.updateAutoFire(delta);
     this.updateBurstQueue(delta);
+    this.updateBiteDamage(delta);
     this.updateDroneSwarm(delta, droneCount);
 
     this.debrisList = this.debrisList.filter(d => d.sprite.active);
