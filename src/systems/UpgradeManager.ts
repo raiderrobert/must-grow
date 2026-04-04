@@ -84,6 +84,7 @@ export class UpgradeManager {
     genRate += this.getLevel("fusionReactor") * 8;
     genRate += this.getLevel("stellarHarvester") * 25;
     resources.generationRate = genRate;
+    resources.massDrainRate = this.getLevel("fusionReactor") * 0.5;
 
     // Drain from automation
     let drain = 0;

@@ -79,6 +79,22 @@ describe("ResourceManager", () => {
     });
   });
 
+  describe("fusion reactor mass drain", () => {
+    it("massDrainRate reduces mass over time", () => {
+      rm.addMass(100);
+      rm.massDrainRate = 5; // 5 mass/sec
+      rm.updateEnergy(1000); // 1 second
+      expect(rm.mass).toBeCloseTo(95);
+    });
+
+    it("mass drain stops when mass is insufficient", () => {
+      rm.addMass(2);
+      rm.massDrainRate = 5;
+      rm.updateEnergy(1000);
+      expect(rm.mass).toBeGreaterThanOrEqual(0);
+    });
+  });
+
   describe("energy generation and drain rates", () => {
     it("net generation rate accounts for generation and drain", () => {
       rm.generationRate = 10;

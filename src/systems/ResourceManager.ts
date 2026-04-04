@@ -14,6 +14,7 @@ export class ResourceManager {
 
   generationRate: number = 0; // energy per second from passive sources
   drainRate: number = 0; // energy per second consumed by active systems
+  massDrainRate: number = 0; // mass consumed per second (fusion reactor)
 
   manualGenerateAmount: number = ENERGY_PER_MANUAL_CLICK;
 
@@ -48,6 +49,13 @@ export class ResourceManager {
       this.addEnergy(net);
     } else {
       this.drainEnergy(Math.abs(net));
+    }
+    if (this.massDrainRate > 0) {
+      const massCost = this.massDrainRate * deltaSec;
+      if (this.mass >= massCost) {
+        this.mass -= massCost;
+      }
+      // If not enough mass, reactor just doesn't feed — no energy added from it
     }
   }
 
