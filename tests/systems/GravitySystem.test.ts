@@ -82,6 +82,36 @@ describe("GravitySystem", () => {
     expect(factor).toBeGreaterThan(0);
   });
 
+  describe("calculateDominantPull", () => {
+    it("returns planet gravity when inside its SOI", () => {
+      gs.addBody({ x: 0, y: 0, gravityMass: 1000, killRadius: 100 });
+      gs.addBody({ x: 100_000, y: 0, gravityMass: 500_000 });
+      const pull = gs.calculateDominantPull(200, 0);
+      expect(pull.x).toBeLessThan(0);
+    });
+
+    it("returns Sun gravity when outside all planet SOIs", () => {
+      gs.addBody({ x: 0, y: 0, gravityMass: 1000, killRadius: 100 });
+      gs.addBody({ x: 100_000, y: 0, gravityMass: 500_000 });
+      const pull = gs.calculateDominantPull(5000, 0);
+      expect(pull.x).toBeGreaterThan(0);
+    });
+
+    it("picks smallest SOI when inside multiple", () => {
+      gs.addBody({ x: 0, y: 0, gravityMass: 500, killRadius: 100 });
+      gs.addBody({ x: 0, y: 300, gravityMass: 5000, killRadius: 200 });
+      const pull = gs.calculateDominantPull(0, 100);
+      expect(pull.y).toBeLessThan(0);
+    });
+
+    it("falls back to most massive body when no SOIs contain position", () => {
+      gs.addBody({ x: 0, y: 0, gravityMass: 100, killRadius: 50 });
+      gs.addBody({ x: 50_000, y: 0, gravityMass: 999_999 });
+      const pull = gs.calculateDominantPull(25_000, 0);
+      expect(pull.x).toBeGreaterThan(0);
+    });
+  });
+
   it("removeBody stops kill zone from being checked", () => {
     const body = { x: 0, y: 0, gravityMass: 1000, killRadius: 500 };
     gs.addBody(body);
