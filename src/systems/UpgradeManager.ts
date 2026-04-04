@@ -58,6 +58,9 @@ export class UpgradeManager {
   ): void {
     // Tier 1 weapons
     combat.clampRange = 80 + this.getLevel("clampRange") * 20;
+    combat.jawStrengthMultiplier = 1 + this.getLevel("jawStrength") * 0.25;
+    combat.chewSpeedMultiplier = 1 + this.getLevel("chewSpeed") * 0.2;
+    combat.energyAmplifierMultiplier = 1 + this.getLevel("energyAmplifier") * 0.15;
 
     // Movement
     player.speed = 150 + this.getLevel("thrusters") * 30;

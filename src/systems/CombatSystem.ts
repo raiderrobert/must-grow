@@ -29,6 +29,9 @@ export class CombatSystem {
   beamDamage: number = 10;
   beamCooldownMax: number = 500;
   beamRange: number = 200;
+  jawStrengthMultiplier: number = 1.0;
+  chewSpeedMultiplier: number = 1.0;
+  energyAmplifierMultiplier: number = 1.0;
 
   debrisGroup!: Phaser.Physics.Arcade.Group;
 
@@ -125,6 +128,12 @@ export class CombatSystem {
       if (distToPlayer <= this.clampRange) {
         this.clampedTarget = closest;
         closest.isBeingChewed = true;
+        // Apply chew speed — reduce clicks needed
+        const reducedClicks = Math.max(
+          Math.ceil(closest.chewClicksRemaining / this.chewSpeedMultiplier),
+          1
+        );
+        closest.chewClicksRemaining = reducedClicks;
         this.chew();
       }
     } else {
@@ -138,7 +147,7 @@ export class CombatSystem {
     if (!this.clampedTarget) return;
 
     const result = this.clampedTarget.chew();
-    this.resources.addMass(result.mass);
+    this.resources.addMass(result.mass * this.jawStrengthMultiplier);
     this.resources.addEnergy(result.energy);
 
     if (result.depleted) {
@@ -188,7 +197,10 @@ export class CombatSystem {
       this.audio?.play("sfx_explosion");
       this.createExplosion(target.sprite.x, target.sprite.y, target.config.color);
       this.spawnDebris(target);
-      this.resources.addEnergy(ENERGY_FROM_DESTROY_BASE);
+      this.resources.addEnergy(
+        (target.config.energyYield + ENERGY_FROM_DESTROY_BASE) *
+          this.energyAmplifierMultiplier
+      );
       this.zones.removeObject(target);
     }
   }
