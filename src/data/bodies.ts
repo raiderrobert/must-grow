@@ -19,7 +19,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Sun ───────────────────────────────────────────────────────────
   {
     name: "Sun",
-    distance: 240_000, angle: -Math.PI / 2,
+    distance: 0, angle: 0,
     visualRadius: 25_000, killRadius: 25_000,
     color: 0xffdd00, gravityMass: 50_000,
     health: 500_000, massYield: 200_000, energyYield: 50_000,
@@ -39,7 +39,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Earth ─────────────────────────────────────────────────────────
   {
     name: "Earth",
-    distance: 25_000, angle: Math.PI / 2,
+    distance: 35_000, angle: Math.PI / 2,
     visualRadius: 3_000, killRadius: 3_000,
     color: 0x1a4a8a, gravityMass: 500,
     health: 100_000, massYield: 50_000, energyYield: 10_000,
