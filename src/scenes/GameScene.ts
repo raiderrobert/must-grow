@@ -58,7 +58,7 @@ export class GameScene extends Phaser.Scene {
     this.zones.populate(this.player.x, this.player.y, 1);
 
     // Earth gravity body — killRadius at outer atmosphere where player naturally drifts in
-    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y + 3_200, gravityMass: 500, killRadius: 3_500 });
+    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y + 3_200, gravityMass: 500, killRadius: 3_100 });
     // Sun far north
     this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y - 240_000, gravityMass: 50_000 });
 
@@ -321,9 +321,9 @@ export class GameScene extends Phaser.Scene {
     const deathRing = this.add.graphics().setDepth(5);
     this.earthObjects.push(deathRing);
     deathRing.lineStyle(120, 0xff3300, 0.55);
-    deathRing.strokeCircle(earthX, earthY, 3_500);
+    deathRing.strokeCircle(earthX, earthY, 3_100);
     deathRing.lineStyle(40, 0xff8800, 0.8);
-    deathRing.strokeCircle(earthX, earthY, 3_500);
+    deathRing.strokeCircle(earthX, earthY, 3_100);
 
     const label = this.add.text(earthX, earthY + radius + 400, "Earth", {
       fontFamily: "monospace", fontSize: "48px", color: "#4488cc",
