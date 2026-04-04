@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE } from "@/constants";
+import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, ZOOM_START, ZOOM_MIN } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -144,7 +144,7 @@ export class GameScene extends Phaser.Scene {
     this.player.body.setPosition(WORLD_CENTER_X, WORLD_CENTER_Y - 500);
 
     // Starting zoom: keeps player ~6px on screen, Earth arc visible at bottom
-    this.cameras.main.setZoom(0.75);
+    this.cameras.main.setZoom(ZOOM_START);
   }
 
   update(_time: number, delta: number): void {
@@ -206,7 +206,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setSize(PLAYER_START_SIZE * growthFactor);
 
     // Keep player ~6px on screen regardless of size; zoom out as station grows
-    const targetZoom = Math.max(0.75 / growthFactor, 0.02);
+    const targetZoom = Math.max(ZOOM_START / growthFactor, ZOOM_MIN);
     const currentZoom = this.cameras.main.zoom;
     const lerpFactor = 1 - Math.exp(-1.5 * (delta / 1000));
     this.cameras.main.setZoom(currentZoom + (targetZoom - currentZoom) * lerpFactor);

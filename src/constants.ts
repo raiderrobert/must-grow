@@ -58,3 +58,7 @@ export const SOLAR_DISTANCES = {
 } as const;
 
 export const GRAVITY_SCALE = 0.08;
+
+// Camera
+export const ZOOM_START = 0.75;   // zoom at game start
+export const ZOOM_MIN = 0.02;     // furthest the camera ever zooms out
