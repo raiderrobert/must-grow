@@ -56,7 +56,7 @@ export class PlayerStation {
     );
     this.body.setCollideWorldBounds(true);
     this.body.setDamping(true);
-    this.body.setDrag(0.95);
+    this.body.setDrag(0.99); // snappy stop
     this.body.setScale(this.size / 32);
 
     // Movement keys
@@ -159,8 +159,8 @@ export class PlayerStation {
 
     const stickX = this.pad?.axes[0]?.getValue() ?? 0;
     const stickY = this.pad?.axes[1]?.getValue() ?? 0;
-    const boostMult = this.isBoosting ? 1.8 : 1.0;
-    const accel = this.speed * 3 * boostMult;
+    const boostMult = this.isBoosting ? 2.0 : 1.0;
+    const accel = this.speed * 8 * boostMult;
 
     // Horizontal
     if (this.cursors.left.isDown || this.wasd.A.isDown || stickX < -0.2) {
@@ -180,13 +180,9 @@ export class PlayerStation {
       this.body.setAccelerationY(0);
     }
 
-    // Cap speed
-    const vel = this.body.body!.velocity;
-    const mag = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
-    const maxSpeed = this.speed * (this.isBoosting ? 1.8 : 1.0);
-    if (mag > maxSpeed) {
-      this.body.body!.velocity.scale(maxSpeed / mag);
-    }
+    // Use Phaser's built-in maxVelocity
+    const maxSpeed = this.speed * (this.isBoosting ? 2.0 : 1.0);
+    (this.body.body as Phaser.Physics.Arcade.Body).setMaxVelocity(maxSpeed, maxSpeed);
 
     // Thrust particles
     const isThrusting =

@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y } from "@/constants";
+import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -139,17 +139,20 @@ export class GameScene extends Phaser.Scene {
 
     // UpgradeScreen overlay: tell it to use uiCam (ignore from main)
     this.upgradeScreen.setMainCamera(this.cameras.main);
+
+    // Start zoomed in so player looks small next to Earth
+    this.cameras.main.setZoom(4.0);
   }
 
   update(_time: number, delta: number): void {
     if (this.isPaused) return;
 
-    // Gravity — delta-based, GRAVITY_CONSTANT already tuned to 250
+    // Gravity — delta-based with GRAVITY_SCALE tuning
     const pull = this.gravity.calculateTotalPull(this.player.x, this.player.y);
     const resist = 1 - this.player.gravityResistance;
     this.player.applyGravity(
-      pull.x * (delta / 1000) * resist,
-      pull.y * (delta / 1000) * resist
+      pull.x * (delta / 1000) * GRAVITY_SCALE * resist,
+      pull.y * (delta / 1000) * GRAVITY_SCALE * resist
     );
 
     // Gravity death
@@ -197,11 +200,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Station growth + zoom
-    const baseSize = 16;
-    const growthFactor = 1 + Math.log2(1 + this.resources.totalMassEarned) * 0.3;
-    this.player.setSize(baseSize * growthFactor);
+    const growthFactor = 1 + Math.log2(1 + this.resources.totalMassEarned) * 0.5;
+    this.player.setSize(PLAYER_START_SIZE * growthFactor);
 
-    const targetZoom = Math.max(1 / growthFactor, 0.2);
+    const targetZoom = Math.max(4.0 / growthFactor, 0.05);
     const currentZoom = this.cameras.main.zoom;
     const lerpFactor = 1 - Math.exp(-1.5 * (delta / 1000));
     this.cameras.main.setZoom(currentZoom + (targetZoom - currentZoom) * lerpFactor);
