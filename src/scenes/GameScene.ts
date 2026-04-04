@@ -13,6 +13,7 @@ import { Minimap } from "@/ui/Minimap";
 import { TrajectoryPredictor } from "@/ui/TrajectoryPredictor";
 import { AudioManager } from "@/systems/AudioManager";
 import { InputManager } from "@/systems/InputManager";
+import { SettingsMenu, type CheatCallbacks } from "@/ui/SettingsMenu";
 import { SpaceObject } from "@/entities/SpaceObject";
 
 import { BODY_DEFS } from "@/data/bodies";
@@ -48,6 +49,10 @@ export class GameScene extends Phaser.Scene {
   private readonly MILESTONE_SCALE = 1.6;
   private isPaused: boolean = false;
   private elapsedTime: number = 0; // ms since game start
+  settingsMenu!: SettingsMenu;
+  private godMode: boolean = false;
+  private infiniteEnergy: boolean = false;
+  private gameSpeedMult: number = 1;
 
   private starfieldLayers!: Phaser.GameObjects.TileSprite[];
   private gravityIndicatorGraphics!: Phaser.GameObjects.Graphics;
@@ -196,6 +201,71 @@ export class GameScene extends Phaser.Scene {
     this.upgradeScreen.setMainCamera(this.cameras.main);
     this.minimap.setMainCamera(this.cameras.main);
 
+    this.settingsMenu = new SettingsMenu(this, {
+      setTier: (tier: number) => {
+        this.currentTier = tier;
+        this.player.tier = tier;
+        this.triggerEvolution(tier);
+      },
+      toggleGodMode: () => {
+        this.godMode = !this.godMode;
+        return this.godMode;
+      },
+      toggleInfiniteEnergy: () => {
+        this.infiniteEnergy = !this.infiniteEnergy;
+        return this.infiniteEnergy;
+      },
+      teleportToPlanet: (name: string) => {
+        const body = this.trackedBodies.find(tb => tb.name === name);
+        if (!body) return;
+        const killR = body.gravityBody.killRadius ?? 0;
+        this.player.body.setPosition(body.gravityBody.x, body.gravityBody.y - killR - 2000);
+        const vel = this.getBodyVelocity(name);
+        this.player.body.setVelocity(vel.vx, vel.vy);
+      },
+      killAllDebris: () => {
+        for (const obj of [...this.zones.getObjects()]) {
+          this.zones.removeObject(obj);
+        }
+      },
+      setSpeedMultiplier: (mult: number) => {
+        this.gameSpeedMult = mult;
+      },
+      spawnDebrisHere: () => {
+        for (let i = 0; i < 100; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 200 + Math.random() * 2000;
+          const x = this.player.x + Math.cos(angle) * dist;
+          const y = this.player.y + Math.sin(angle) * dist;
+          const size = 20 + Math.random() * 50;
+          const colors = [0x888888, 0x666666, 0x8b7355, 0xa0926b];
+          const obj = new SpaceObject(this, {
+            x, y, size,
+            health: 10 + size,
+            massYield: Math.floor(size * 0.3),
+            energyYield: Math.floor(size * 0.1),
+            gravityMass: 0,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            velocityX: this.player.body.body!.velocity.x,
+            velocityY: this.player.body.body!.velocity.y,
+          });
+          this.zones.addFixedObject(obj);
+        }
+      },
+      destroyPlanet: (name: string) => {
+        const tracked = this.trackedBodies.find(tb => tb.name === name);
+        if (!tracked) return;
+        this.combat.createExplosionAt(tracked.spaceObj.sprite.x, tracked.spaceObj.sprite.y, tracked.spaceObj.config.color);
+        this.resources.addMass(tracked.spaceObj.config.massYield);
+        this.zones.removeObject(tracked.spaceObj);
+        this.onBodyDestroyed(tracked);
+      },
+      getPlanetNames: () => {
+        return this.trackedBodies.map(tb => tb.name);
+      },
+    } satisfies CheatCallbacks);
+    this.settingsMenu.setMainCamera(this.cameras.main);
+
     // (player position set dynamically in spawnNearEarth below)
 
     // Starting zoom: keeps player ~6px on screen, Earth arc visible at bottom
@@ -206,6 +276,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isPaused) return;
 
     this.elapsedTime += delta;
+    delta *= this.gameSpeedMult;
 
     // Gravity — delta-based with GRAVITY_SCALE tuning
     const pull = this.gravity.calculateDominantPull(this.player.x, this.player.y);
@@ -274,11 +345,25 @@ export class GameScene extends Phaser.Scene {
 
     // Gravity death
     if (this.gravity.isInLethalZone(this.player.x, this.player.y, this.player.thrustPower)) {
-      this.handleDeath();
+      if (!this.godMode) {
+        this.handleDeath();
+      }
     }
 
     // Poll input first so all systems read consistent state this frame
     this.inputManager.update();
+
+    if (this.inputManager.consumeMenuToggle()) {
+      this.settingsMenu.toggle();
+      if (this.settingsMenu.visible) {
+        this.isPaused = true;
+        this.physics.world.pause();
+      } else {
+        this.isPaused = false;
+        this.physics.world.resume();
+      }
+      return;
+    }
 
     // Player movement
     this.player.isLocked = false;
@@ -328,6 +413,11 @@ export class GameScene extends Phaser.Scene {
     if (approachFactor > 0) {
       const drainPerSec = approachFactor * approachFactor * 40; // 0 at outer edge, 40/sec at surface
       this.resources.energy = Math.max(0, this.resources.energy - drainPerSec * (delta / 1000));
+    }
+
+    // Cheat: infinite energy
+    if (this.infiniteEnergy) {
+      this.resources.energy = this.resources.batteryCapacity;
     }
 
     // Tier evolution

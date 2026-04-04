@@ -42,7 +42,7 @@ export class CombatSystem {
   beamRange: number = 300;
   burstShotCount: number = 3;      // shots per manual burst activation
   burstCooldownMax: number = 800;  // ms before another burst allowed
-  debrisPickupRange: number = 80;  // world pixels — tighter, snappier collection
+  debrisPickupRange: number = 400; // world pixels — debris pulled toward player within this radius
 
   debrisGroup!: Phaser.Physics.Arcade.Group;
 
@@ -177,6 +177,10 @@ export class CombatSystem {
       0xffd93d, // gold burst color
       1.0
     );
+  }
+
+  createExplosionAt(x: number, y: number, color: number): void {
+    this.createExplosion(x, y, color);
   }
 
   private createExplosion(x: number, y: number, color: number): void {

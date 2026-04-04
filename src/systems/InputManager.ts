@@ -27,6 +27,8 @@ export class InputManager {
 
   private _lastInputType: InputType = "keyboard";
   private _attackJustPressed: boolean = false;
+  private _menuJustPressed: boolean = false;
+  private menuKey!: Phaser.Input.Keyboard.Key;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -48,6 +50,7 @@ export class InputManager {
     this.boostKey = scene.input.keyboard!.addKey(
       Phaser.Input.Keyboard.KeyCodes.SHIFT,
     );
+    this.menuKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
 
     // Keyboard activity → mark as keyboard
     scene.input.keyboard!.on("keydown", () => {
@@ -71,6 +74,7 @@ export class InputManager {
         ) => {
           this._lastInputType = "gamepad";
           if (button.index === 0) this._attackJustPressed = true;
+          if (button.index === 9) this._menuJustPressed = true;
         },
       );
     }
@@ -92,6 +96,10 @@ export class InputManager {
     if (this.attackKeys.some((k) => Phaser.Input.Keyboard.JustDown(k))) {
       this._attackJustPressed = true;
       this._lastInputType = "keyboard";
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.menuKey)) {
+      this._menuJustPressed = true;
     }
   }
 
@@ -128,6 +136,12 @@ export class InputManager {
   consumeAttack(): boolean {
     const pressed = this._attackJustPressed;
     this._attackJustPressed = false;
+    return pressed;
+  }
+
+  consumeMenuToggle(): boolean {
+    const pressed = this._menuJustPressed;
+    this._menuJustPressed = false;
     return pressed;
   }
 
