@@ -57,8 +57,8 @@ export class GameScene extends Phaser.Scene {
 
     this.zones.populate(this.player.x, this.player.y, 1);
 
-    // Earth gravity body — killRadius matches the visual ocean surface
-    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y + 3_200, gravityMass: 500, killRadius: 3_000 });
+    // Earth gravity body — killRadius at outer atmosphere where player naturally drifts in
+    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y + 3_200, gravityMass: 500, killRadius: 3_500 });
     // Sun far north
     this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y - 240_000, gravityMass: 50_000 });
 
@@ -317,9 +317,14 @@ export class GameScene extends Phaser.Scene {
     g.lineStyle(30, 0x4488cc, 0.3);
     g.strokeCircle(earthX, earthY, radius);
 
-    // Death boundary — bright ring exactly at the kill surface so the player can see it
-    g.lineStyle(40, 0x88ccff, 0.6);
-    g.strokeCircle(earthX, earthY, radius);
+    // Death boundary ring — separate graphics at high depth, bright red, at killRadius
+    // killRadius = 3500 (outer atmosphere, 200px above the inner layer)
+    const deathRing = this.add.graphics().setDepth(5);
+    this.earthObjects.push(deathRing);
+    deathRing.lineStyle(120, 0xff3300, 0.55);
+    deathRing.strokeCircle(earthX, earthY, 3_500);
+    deathRing.lineStyle(40, 0xff8800, 0.8);
+    deathRing.strokeCircle(earthX, earthY, 3_500);
 
     const label = this.add.text(earthX, earthY + radius + 400, "Earth", {
       fontFamily: "monospace", fontSize: "48px", color: "#4488cc",
