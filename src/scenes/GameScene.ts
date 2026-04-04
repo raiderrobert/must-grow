@@ -356,23 +356,40 @@ export class GameScene extends Phaser.Scene {
     this.audio.music.onTierChange(newTier);
   }
 
+  private getEarthVelocity(): { vx: number; vy: number } {
+    const earthOrbit = this.orbitStates.find(os => os.bodyName === "Earth");
+    if (!earthOrbit) return { vx: 0, vy: 0 };
+    const linearSpeed = earthOrbit.orbitSpeed * earthOrbit.distance * ORBIT_SPEED_SCALE;
+    const perpAngle = earthOrbit.currentAngle + Math.PI / 2;
+    return {
+      vx: Math.cos(perpAngle) * linearSpeed,
+      vy: Math.sin(perpAngle) * linearSpeed,
+    };
+  }
+
   private spawnNearEarth(): void {
     const earthBody = this.trackedBodies.find(tb => tb.name === "Earth");
-    if (earthBody) {
-      const killR = earthBody.gravityBody.killRadius ?? 3_000;
-      const orbitAltitude = 1_500;            // px above Earth's surface
-      const spawnDist = killR + orbitAltitude; // distance from Earth's center
-      const spawnX = earthBody.gravityBody.x;
-      const spawnY = earthBody.gravityBody.y - spawnDist;
-      this.player.body.setPosition(spawnX, spawnY);
-      const orbitalSpeed = Math.sqrt(
-        GRAVITY_CONSTANT * earthBody.gravityBody.gravityMass * GRAVITY_SCALE / spawnDist
-      );
-      this.player.body.setVelocity(orbitalSpeed, 0);
-    } else {
+    if (!earthBody) {
       this.player.body.setPosition(WORLD_CENTER_X, WORLD_CENTER_Y);
       this.player.body.setVelocity(0, 0);
+      return;
     }
+
+    const killR = earthBody.gravityBody.killRadius ?? 3_000;
+    const spawnDist = killR + 1_500;
+    this.player.body.setPosition(
+      earthBody.gravityBody.x,
+      earthBody.gravityBody.y - spawnDist
+    );
+
+    // Player's circular orbit speed around Earth
+    const playerOrbitSpeed = Math.sqrt(
+      GRAVITY_CONSTANT * earthBody.gravityBody.gravityMass * GRAVITY_SCALE / spawnDist
+    );
+
+    // Add Earth's own velocity so the player moves with Earth
+    const { vx: earthVx, vy: earthVy } = this.getEarthVelocity();
+    this.player.body.setVelocity(earthVx + playerOrbitSpeed, earthVy);
   }
 
   private handleDeath(): void {
