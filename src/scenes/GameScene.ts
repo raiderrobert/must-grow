@@ -436,7 +436,7 @@ export class GameScene extends Phaser.Scene {
 
     // Station growth + zoom
     // Size grows dramatically with tier — visible jumps at each evolution
-    const tierSizeMultipliers = [1, 3, 6, 10, 15]; // T1 through T5
+    const tierSizeMultipliers = [1, 5, 20, 80, 300]; // T1 through T5
     const tierIdx = Math.min(this.currentTier - 1, tierSizeMultipliers.length - 1);
     const baseMult = tierSizeMultipliers[tierIdx];
 
@@ -512,7 +512,7 @@ export class GameScene extends Phaser.Scene {
 
     // ── Tier power spike ──────────────────────────────────────────
     // Each tier is 10x more powerful than the last
-    const tierMultiplier = Math.pow(10, newTier - 1); // T1=1, T2=10, T3=100, T4=1000, T5=10000
+    const tierMultiplier = Math.pow(3, newTier - 1); // T1=1, T2=3, T3=9, T4=27, T5=81
 
     this.combat.beamRange = 300 * tierMultiplier;
     this.combat.beamDamage = 10 * tierMultiplier;
