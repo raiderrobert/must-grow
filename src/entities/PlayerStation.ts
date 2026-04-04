@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import {
-  PLAYER_BASE_SPEED,
+  PLAYER_THRUST_POWER,
   PLAYER_START_SIZE,
   PLAYER_SPAWN_X,
   PLAYER_SPAWN_Y,
@@ -20,7 +20,7 @@ export class PlayerStation {
   isBoosting: boolean = false;
 
   // Stats (modified by upgrades and cards)
-  speed: number = PLAYER_BASE_SPEED;
+  speed: number = PLAYER_THRUST_POWER;
   thrustPower: number = 50;
   gravityResistance: number = 0;
 
