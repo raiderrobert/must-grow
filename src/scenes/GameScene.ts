@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { WORLD_WIDTH, WORLD_HEIGHT, COLORS } from "@/constants";
+import { createStarfield } from "@/entities/Starfield";
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -10,6 +11,8 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.background);
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+    createStarfield(this);
   }
 
   update(_time: number, _delta: number): void {
