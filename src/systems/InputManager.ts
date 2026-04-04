@@ -10,7 +10,7 @@ export type InputType = "keyboard" | "gamepad";
  * Bindings:
  *   Move:   WASD / Arrow keys  |  Left stick
  *   Burst:  Space / J          |  A (button 0)
- *   Boost:  Shift              |  RB (button 7)
+ *   Boost:  Shift              |  LT (button 6)
  */
 export class InputManager {
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -131,9 +131,9 @@ export class InputManager {
     return pressed;
   }
 
-  /** True while boost is held (Shift or gamepad RB). */
+  /** True while boost is held (Shift or gamepad LT). */
   get isBoostHeld(): boolean {
-    return this.boostKey.isDown || (this.pad?.buttons[7]?.pressed ?? false);
+    return this.boostKey.isDown || (this.pad?.buttons[6]?.pressed ?? false);
   }
 
   // ── Input type ────────────────────────────────────────────────────
