@@ -7,6 +7,7 @@ import { UpgradeManager } from "@/systems/UpgradeManager";
 import { GravitySystem } from "@/systems/GravitySystem";
 import { ZoneManager } from "@/systems/ZoneManager";
 import { getTierForMass, getTierName } from "@/data/tiers";
+import { CombatSystem } from "@/systems/CombatSystem";
 
 export class GameScene extends Phaser.Scene {
   player!: PlayerStation;
@@ -14,6 +15,7 @@ export class GameScene extends Phaser.Scene {
   upgrades!: UpgradeManager;
   gravity!: GravitySystem;
   zones!: ZoneManager;
+  combat!: CombatSystem;
   currentTier: number = 1;
 
   constructor() {
@@ -41,6 +43,21 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.gravity.initGraphics(this);
+
+    this.combat = new CombatSystem(this, this.player, this.resources, this.zones);
+    this.combat.setUpgrades(this.upgrades);
+
+    // Collision: player vs space objects
+    this.physics.add.overlap(
+      this.player.body,
+      this.zones.objectGroup,
+      (_playerSprite, objSprite) => {
+        const obj = (objSprite as Phaser.Physics.Arcade.Sprite).getData(
+          "spaceObject"
+        ) as import("@/entities/SpaceObject").SpaceObject;
+        if (obj) this.onCollision(obj);
+      }
+    );
   }
 
   update(_time: number, delta: number): void {
@@ -51,7 +68,13 @@ export class GameScene extends Phaser.Scene {
     // 2. Player movement
     this.player.update(delta);
 
-    // 3. Zone spawning
+    // 3. Combat (manual + auto)
+    this.combat.update(delta);
+
+    // 4. Upgrade effects
+    this.upgrades.applyEffects(this.player, this.combat, this.resources);
+
+    // Zone spawning
     const tier = getTierForMass(this.resources.totalMassEarned);
     this.zones.update(
       delta,
@@ -61,7 +84,7 @@ export class GameScene extends Phaser.Scene {
       this.resources.totalMassEarned
     );
 
-    // 4. Energy tick
+    // Energy tick
     this.resources.updateEnergy(delta);
 
     // 5. Tier check
