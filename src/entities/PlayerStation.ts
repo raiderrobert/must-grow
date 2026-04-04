@@ -35,7 +35,6 @@ export class PlayerStation {
     g.destroy();
 
     this.body = scene.physics.add.sprite(PLAYER_SPAWN_X, PLAYER_SPAWN_Y, textureKey);
-    this.body.setCollideWorldBounds(true);
     this.body.setScale(this.size / 32);
 
     scene.cameras.main.startFollow(this.body, true, 1, 1);
