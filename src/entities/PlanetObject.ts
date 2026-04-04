@@ -5,12 +5,15 @@ import { SpaceObject, type SpaceObjectConfig } from "@/entities/SpaceObject";
 export interface PlanetDef {
   name: string;
   distance: number;
-  angle: number;          // radians from center
+  angle: number;
   visualRadius: number;   // display radius in world pixels
   color: number;
   atmosphereColor: number;
   config: Omit<SpaceObjectConfig, "x" | "y" | "size" | "color" | "name">;
 }
+
+/** Max physics proxy radius — keeps collision textures within WebGL limits. */
+const MAX_PROXY_RADIUS = 1500;
 
 export const PLANET_DEFS: PlanetDef[] = [
   {
@@ -50,60 +53,66 @@ export const PLANET_DEFS: PlanetDef[] = [
   },
 ];
 
+/**
+ * Creates a named planet. Uses scene.add.graphics() for the visual (no texture size limit)
+ * and a small physics proxy SpaceObject for collision/combat targeting.
+ */
 export function createPlanet(scene: Phaser.Scene, def: PlanetDef): SpaceObject {
   const x = WORLD_CENTER_X + Math.cos(def.angle) * def.distance;
   const y = WORLD_CENTER_Y + Math.sin(def.angle) * def.distance;
-
   const r = def.visualRadius;
-  const texKey = `planet_${def.name}`;
 
-  if (!scene.textures.exists(texKey)) {
-    const g = scene.add.graphics();
-    // Atmosphere glow
-    g.fillStyle(def.atmosphereColor, 0.2);
-    g.fillCircle(r + 20, r + 20, r + 20);
-    // Body
-    g.fillStyle(def.color, 1.0);
-    g.fillCircle(r + 20, r + 20, r);
-    // Highlight
-    g.fillStyle(0xffffff, 0.08);
-    g.fillCircle(r + 20 - r * 0.3, r + 20 - r * 0.3, r * 0.5);
-    // Outline
-    g.lineStyle(Math.max(2, r * 0.01), 0xffffff, 0.15);
-    g.strokeCircle(r + 20, r + 20, r);
-    g.generateTexture(texKey, (r + 20) * 2, (r + 20) * 2);
-    g.destroy();
+  // ── Visual: drawn directly into world space, no texture size limit ──
+  const g = scene.add.graphics().setDepth(0);
+
+  // Atmosphere glow
+  g.fillStyle(def.atmosphereColor, 0.15);
+  g.fillCircle(x, y, r + r * 0.15);
+
+  // Body
+  g.fillStyle(def.color, 1.0);
+  g.fillCircle(x, y, r);
+
+  // Highlight
+  g.fillStyle(0xffffff, 0.07);
+  g.fillCircle(x - r * 0.3, y - r * 0.3, r * 0.5);
+
+  // Outline
+  g.lineStyle(Math.max(2, r * 0.008), 0xffffff, 0.12);
+  g.strokeCircle(x, y, r);
+
+  // Saturn rings (drawn before label so label renders on top)
+  if (def.name === "Saturn") {
+    g.lineStyle(r * 0.07, def.atmosphereColor, 0.45);
+    g.strokeEllipse(x, y, r * 3.2, r * 0.45);
+    g.lineStyle(r * 0.035, def.color, 0.25);
+    g.strokeEllipse(x, y, r * 2.8, r * 0.38);
   }
 
+  // Label — font size proportional to planet, camera zoom handles readability
+  const fontSize = Math.max(24, Math.min(r * 0.12, 400));
+  scene.add
+    .text(x, y + r + fontSize * 1.5, def.name, {
+      fontFamily: "monospace",
+      fontSize: `${Math.round(fontSize)}px`,
+      color: "#" + def.color.toString(16).padStart(6, "0"),
+    })
+    .setOrigin(0.5)
+    .setDepth(1)
+    .setAlpha(0.85);
+
+  // ── Physics proxy: small enough for a valid texture, used for targeting ──
+  const proxyRadius = Math.min(r, MAX_PROXY_RADIUS);
   const spaceObj = new SpaceObject(scene, {
     x, y,
-    size: r,
+    size: proxyRadius,
     color: def.color,
     name: def.name,
     ...def.config,
   });
 
-  // Override with detailed texture
-  spaceObj.sprite.setTexture(texKey);
-  spaceObj.sprite.setDisplaySize(r * 2, r * 2);
-
-  // Label
-  const labelSize = Math.max(24, r * 0.08);
-  scene.add.text(x, y + r + labelSize * 2, def.name, {
-    fontFamily: "monospace",
-    fontSize: `${labelSize}px`,
-    color: "#" + def.color.toString(16).padStart(6, "0"),
-  }).setOrigin(0.5).setDepth(1).setAlpha(0.8);
-
-  // Saturn rings
-  if (def.name === "Saturn") {
-    const rings = scene.add.graphics().setDepth(0);
-    rings.lineStyle(r * 0.08, def.atmosphereColor, 0.5);
-    rings.strokeEllipse(x, y, r * 3.2, r * 0.5);
-    rings.lineStyle(r * 0.04, def.color, 0.3);
-    rings.strokeEllipse(x, y, r * 2.8, r * 0.4);
-  }
-
+  // Make the proxy sprite invisible — the Graphics handles visuals
+  spaceObj.sprite.setVisible(false);
   spaceObj.sprite.setVelocity(0, 0);
 
   return spaceObj;

@@ -55,8 +55,8 @@ export class GameScene extends Phaser.Scene {
 
     this.zones.populate(this.player.x, this.player.y, 1);
 
-    // Earth at world center
-    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y, gravityMass: 500 });
+    // Earth gravity body — matches renderEarth() visual position
+    this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y + 3_200, gravityMass: 500 });
     // Sun far north
     this.gravity.addBody({ x: WORLD_CENTER_X, y: WORLD_CENTER_Y - 240_000, gravityMass: 50_000 });
 
@@ -139,6 +139,9 @@ export class GameScene extends Phaser.Scene {
 
     // UpgradeScreen overlay: tell it to use uiCam (ignore from main)
     this.upgradeScreen.setMainCamera(this.cameras.main);
+
+    // Spawn player well above Earth's surface (Earth surface ≈ WORLD_CENTER_Y + 200)
+    this.player.body.setPosition(WORLD_CENTER_X, WORLD_CENTER_Y - 5_000);
 
     // Start zoomed in so player looks small next to Earth
     this.cameras.main.setZoom(4.0);
@@ -308,8 +311,8 @@ export class GameScene extends Phaser.Scene {
     g.strokeCircle(earthX, earthY, radius);
 
     const label = this.add.text(earthX, earthY + radius + 400, "Earth", {
-      fontFamily: "monospace", fontSize: "300px", color: "#4488cc",
-    }).setOrigin(0.5).setDepth(-3).setAlpha(0.6);
+      fontFamily: "monospace", fontSize: "48px", color: "#4488cc",
+    }).setOrigin(0.5).setDepth(-3).setAlpha(0.6).setScale(60);
     this.earthObjects.push(label);
   }
 
@@ -333,8 +336,8 @@ export class GameScene extends Phaser.Scene {
     g.fillCircle(sunX, sunY, radius * 0.5);
 
     const sunLabel = this.add.text(sunX, sunY + radius + 2_000, "The Sun", {
-      fontFamily: "monospace", fontSize: "2000px", color: "#ffdd00",
-    }).setOrigin(0.5).setDepth(-4).setAlpha(0.8);
+      fontFamily: "monospace", fontSize: "48px", color: "#ffdd00",
+    }).setOrigin(0.5).setDepth(-4).setAlpha(0.8).setScale(600);
     this.earthObjects.push(sunLabel);
   }
 
