@@ -59,6 +59,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.gravity.initGraphics(this);
+    this.renderEarth();
 
     this.combat = new CombatSystem(this, this.player, this.resources, this.zones);
     this.combat.setUpgrades(this.upgrades);
@@ -168,6 +169,37 @@ export class GameScene extends Phaser.Scene {
       this.player.y,
       this.player.thrustPower
     );
+  }
+
+  private renderEarth(): void {
+    const earthX = WORLD_WIDTH / 2;
+    const earthY = WORLD_HEIGHT / 2 + 600;
+    const radius = 180;
+    const g = this.add.graphics().setDepth(-3);
+
+    // Atmosphere glow
+    g.fillStyle(0x1a3a5c, 0.3);
+    g.fillCircle(earthX, earthY, radius + 30);
+    // Ocean base
+    g.fillStyle(0x1a4a8a, 0.9);
+    g.fillCircle(earthX, earthY, radius);
+    // Land masses
+    g.fillStyle(0x2d6e2d, 0.85);
+    g.fillEllipse(earthX - 40, earthY - 30, 90, 70);
+    g.fillEllipse(earthX + 50, earthY + 20, 70, 80);
+    g.fillEllipse(earthX - 20, earthY + 50, 60, 40);
+    // Cloud layer
+    g.fillStyle(0xffffff, 0.15);
+    g.fillCircle(earthX, earthY, radius);
+    // Outline
+    g.lineStyle(2, 0x4488cc, 0.4);
+    g.strokeCircle(earthX, earthY, radius);
+
+    this.add.text(earthX, earthY + radius + 20, "Earth", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#4488cc",
+    }).setOrigin(0.5).setDepth(-3).setAlpha(0.6);
   }
 
   private triggerEvolution(newTier: number): void {
