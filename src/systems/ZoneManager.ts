@@ -34,6 +34,24 @@ export class ZoneManager {
     // Clean up destroyed objects
     this.objects = this.objects.filter((obj) => obj.sprite.active);
 
+    // LOD cull — remove objects too small to matter at current player size
+    const surviving: SpaceObject[] = [];
+    for (const obj of this.objects) {
+      if (!obj.sprite.active) continue;
+      const isFixed = obj.sprite.getData("fixed") === true;
+      if (isFixed) {
+        surviving.push(obj);
+        continue;
+      }
+      const cullThreshold = playerSize * 0.08;
+      if (obj.config.size < cullThreshold) {
+        obj.destroy();
+        continue;
+      }
+      surviving.push(obj);
+    }
+    this.objects = surviving;
+
     const playerDist = Phaser.Math.Distance.Between(
       playerX,
       playerY,
@@ -42,6 +60,11 @@ export class ZoneManager {
     );
 
     for (const zone of ZONES) {
+      // Gate zones by activation range
+      const zoneCenter = (zone.minDistance + zone.maxDistance) / 2;
+      const distToZone = Math.abs(playerDist - zoneCenter);
+      if (distToZone > zone.activationRange + playerSize * 10) continue;
+
       const objectsInZone = this.objects.filter((obj) => {
         const d = Phaser.Math.Distance.Between(
           obj.sprite.x,
@@ -54,13 +77,7 @@ export class ZoneManager {
 
       if (objectsInZone.length >= zone.maxObjects) continue;
 
-      if (
-        playerDist < zone.minDistance - 1500 ||
-        playerDist > zone.maxDistance + 1500
-      )
-        continue;
-
-      this.spawnInZone(zone, playerTier, playerX, playerY);
+      this.spawnInZone(zone, playerTier, playerX, playerY, false, playerSize);
     }
   }
 
@@ -69,7 +86,7 @@ export class ZoneManager {
     for (const zone of ZONES) {
       const target = Math.floor(zone.maxObjects * 0.7);
       for (let i = 0; i < target; i++) {
-        this.spawnInZone(zone, playerTier, playerX, playerY, true);
+        this.spawnInZone(zone, playerTier, playerX, playerY, true, 8);
       }
     }
   }
@@ -79,7 +96,8 @@ export class ZoneManager {
     playerTier: number,
     playerX: number,
     playerY: number,
-    skipDistCheck: boolean = false
+    skipDistCheck: boolean = false,
+    playerSize: number = 8
   ): void {
     const eligible = zone.spawnTable.filter((e) => playerTier >= e.minTier);
     if (eligible.length === 0) return;
@@ -111,9 +129,11 @@ export class ZoneManager {
     const x = CENTER_X + Math.cos(angle) * dist;
     const y = CENTER_Y + Math.sin(angle) * dist;
 
-    // Don't spawn too close to or too far from player
+    // Spawn radius scales with player size
+    const spawnMin = Math.max(200, playerSize * 3);
+    const spawnMax = Math.max(2000, playerSize * 25);
     const distToPlayer = Phaser.Math.Distance.Between(x, y, playerX, playerY);
-    if (!skipDistCheck && (distToPlayer < 200 || distToPlayer > 2000)) return;
+    if (!skipDistCheck && (distToPlayer < spawnMin || distToPlayer > spawnMax)) return;
 
     const config = selected.factory();
     const obj = new SpaceObject(this.scene, { x, y, ...config });
