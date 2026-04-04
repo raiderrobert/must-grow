@@ -10,6 +10,7 @@ import { CombatSystem } from "@/systems/CombatSystem";
 import { HUD } from "@/ui/HUD";
 import { UpgradeScreen } from "@/ui/UpgradeScreen";
 import { Minimap } from "@/ui/Minimap";
+import { TrajectoryPredictor } from "@/ui/TrajectoryPredictor";
 import { AudioManager } from "@/systems/AudioManager";
 import { InputManager } from "@/systems/InputManager";
 import { SpaceObject } from "@/entities/SpaceObject";
@@ -35,6 +36,7 @@ export class GameScene extends Phaser.Scene {
   hud!: HUD;
   upgradeScreen!: UpgradeScreen;
   minimap!: Minimap;
+  private trajectoryPredictor!: TrajectoryPredictor;
   audio!: AudioManager;
   inputManager!: InputManager;
 
@@ -109,6 +111,7 @@ export class GameScene extends Phaser.Scene {
 
     this.hud = new HUD(this, this.resources, this.combat, this.inputManager, this.audio);
     this.minimap = new Minimap(this, this.gravity);
+    this.trajectoryPredictor = new TrajectoryPredictor(this, this.gravity);
 
     this.upgradeScreen = new UpgradeScreen(
       this, this.combat, this.resources, this.player, this.audio
@@ -150,6 +153,7 @@ export class GameScene extends Phaser.Scene {
       ]),
       this.player.body,
       this.gravityIndicatorGraphics,
+      this.trajectoryPredictor.getGraphics(),
       ...(this.gravity.getGraphics() ? [this.gravity.getGraphics()!] : []),
       ...(this.player.getParticleEmitter() ? [this.player.getParticleEmitter()!] : []),
       ...this.combat.getWorldGraphics(),
@@ -286,6 +290,11 @@ export class GameScene extends Phaser.Scene {
     updateStarfield(this.starfieldLayers, this.cameras.main);
     this.gravity.renderDangerZones(this.player.x, this.player.y, this.player.thrustPower);
     this.updateGravityIndicator();
+    const playerBody = this.player.body.body as Phaser.Physics.Arcade.Body;
+    this.trajectoryPredictor.update(
+      this.player.x, this.player.y,
+      playerBody.velocity.x, playerBody.velocity.y
+    );
     this.updateDangerVignette();
   }
 
