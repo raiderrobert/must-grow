@@ -39,7 +39,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Earth ─────────────────────────────────────────────────────────
   {
     name: "Earth",
-    distance: 35_000, angle: Math.PI / 2,
+    distance: 105_000, angle: Math.PI / 2,
     visualRadius: 3_000, killRadius: 3_000,
     color: 0x1a4a8a, gravityMass: 500,
     health: 100_000, massYield: 50_000, energyYield: 10_000,
@@ -64,7 +64,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Mercury ───────────────────────────────────────────────────────
   {
     name: "Mercury",
-    distance: 12_000, angle: 0.8,
+    distance: 75_000, angle: 0.8,
     visualRadius: 400, killRadius: 400,
     color: 0x9b8b78, gravityMass: 800,
     health: 2_000, massYield: 800, energyYield: 200,
@@ -85,7 +85,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Venus ─────────────────────────────────────────────────────────
   {
     name: "Venus",
-    distance: 22_000, angle: 2.1,
+    distance: 90_000, angle: 2.1,
     visualRadius: 900, killRadius: 900,
     color: 0xe8b84b, gravityMass: 2_000,
     health: 5_000, massYield: 2_000, energyYield: 500,
@@ -109,7 +109,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Mars ──────────────────────────────────────────────────────────
   {
     name: "Mars",
-    distance: 30_000, angle: 3.9,
+    distance: 120_000, angle: 3.9,
     visualRadius: 700, killRadius: 700,
     color: 0xc1440e, gravityMass: 1_200,
     health: 3_000, massYield: 1_200, energyYield: 300,
@@ -127,7 +127,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Jupiter ───────────────────────────────────────────────────────
   {
     name: "Jupiter",
-    distance: 95_000, angle: 1.2,
+    distance: 150_000, angle: 1.2,
     visualRadius: 8_000, killRadius: 8_000,
     color: 0xc88b3a, gravityMass: 20_000,
     health: 50_000, massYield: 20_000, energyYield: 5_000,
@@ -153,7 +153,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Saturn ────────────────────────────────────────────────────────
   {
     name: "Saturn",
-    distance: 140_000, angle: 4.5,
+    distance: 170_000, angle: 4.5,
     visualRadius: 6_500, killRadius: 6_500,
     color: 0xe4d090, gravityMass: 16_000,
     health: 40_000, massYield: 16_000, energyYield: 4_000,
@@ -178,7 +178,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Uranus ────────────────────────────────────────────────────────
   {
     name: "Uranus",
-    distance: 175_000, angle: 0.3,
+    distance: 185_000, angle: 0.3,
     visualRadius: 3_500, killRadius: 3_500,
     color: 0x7de8e8, gravityMass: 10_000,
     health: 25_000, massYield: 10_000, energyYield: 2_500,
@@ -197,7 +197,7 @@ export const BODY_DEFS: BodyDef[] = [
   // ── Neptune ───────────────────────────────────────────────────────
   {
     name: "Neptune",
-    distance: 200_000, angle: 2.8,
+    distance: 195_000, angle: 2.8,
     visualRadius: 3_200, killRadius: 3_200,
     color: 0x3f54ba, gravityMass: 9_000,
     health: 22_000, massYield: 9_000, energyYield: 2_200,
