@@ -3,6 +3,7 @@ import { COLORS } from "@/constants";
 import { ResourceManager } from "@/systems/ResourceManager";
 import { getTierForMass, getTierName } from "@/data/tiers";
 import type { AudioManager } from "@/systems/AudioManager";
+import type { CombatSystem } from "@/systems/CombatSystem";
 
 export class HUD {
   private scene: Phaser.Scene;
@@ -13,7 +14,8 @@ export class HUD {
   private energyText!: Phaser.GameObjects.Text;
   private massText!: Phaser.GameObjects.Text;
   private tierText!: Phaser.GameObjects.Text;
-  private burstIndicator!: Phaser.GameObjects.Text;
+  private burstText!: Phaser.GameObjects.Text;
+  private combat: CombatSystem | null = null;
 
   // All tracked HUD objects for camera ignore
   private objects: Phaser.GameObjects.GameObject[] = [];
@@ -21,15 +23,17 @@ export class HUD {
   constructor(
     scene: Phaser.Scene,
     resources: ResourceManager,
+    combat: CombatSystem | null = null,
     audio?: AudioManager
   ) {
+    this.combat = combat;
     this.scene = scene;
     this.resources = resources;
 
     this.createEnergyBar();
     this.createMassCounter();
     this.createTierIndicator();
-    this.createBurstIndicator();
+    this.createBurstText();
 
     if (audio) {
       const muteBtn = scene.add
@@ -49,15 +53,14 @@ export class HUD {
 
     const hint = scene.add
       .text(
-        scene.scale.width / 2,
+        20,
         scene.scale.height - 16,
-        "WASD move  ·  SHIFT boost  ·  SPACE/J burst fire",
-        { fontFamily: "monospace", fontSize: "11px", color: "#666" }
+        "WASD · SPACE burst · SHIFT boost",
+        { fontFamily: "monospace", fontSize: "11px", color: "#444" }
       )
-      .setOrigin(0.5, 1)
+      .setOrigin(0, 1)
       .setScrollFactor(0)
-      .setDepth(100)
-      .setAlpha(0.7);
+      .setDepth(100);
     this.objects.push(hint);
   }
 
@@ -126,16 +129,16 @@ export class HUD {
     this.objects.push(this.tierText);
   }
 
-  private createBurstIndicator(): void {
-    this.burstIndicator = this.scene.add
+  private createBurstText(): void {
+    this.burstText = this.scene.add
       .text(20, 94, "", {
         fontFamily: "monospace",
-        fontSize: "11px",
+        fontSize: "12px",
         color: "#ffd93d",
       })
       .setScrollFactor(0)
       .setDepth(100);
-    this.objects.push(this.burstIndicator);
+    this.objects.push(this.burstText);
   }
 
   update(): void {
@@ -161,8 +164,8 @@ export class HUD {
     const tier = getTierForMass(this.resources.totalMassEarned);
     this.tierText.setText(`Tier ${tier}: ${getTierName(tier)}`);
 
-    this.burstIndicator.setText(
-      this.resources.canBurst ? "BURST ready [SPC]" : `burst ${Math.floor(this.resources.energy)}/${this.resources.burstCost}`
-    );
+    const canBurst = this.resources.canBurst && (this.combat?.burstCooldown ?? 0) <= 0;
+    this.burstText.setText(canBurst ? "BURST ready [SPC]" : "");
+    this.burstText.setColor(canBurst ? "#ffd93d" : "#555");
   }
 }

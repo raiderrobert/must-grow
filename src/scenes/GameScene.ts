@@ -81,7 +81,7 @@ export class GameScene extends Phaser.Scene {
     this.audio = new AudioManager(this);
     this.combat.setAudio(this.audio);
 
-    this.hud = new HUD(this, this.resources, this.audio);
+    this.hud = new HUD(this, this.resources, this.combat, this.audio);
 
     this.upgradeScreen = new UpgradeScreen(
       this, this.combat, this.resources, this.player, this.audio
