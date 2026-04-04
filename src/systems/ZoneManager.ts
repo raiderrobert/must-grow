@@ -104,8 +104,17 @@ export class ZoneManager {
     }
 
     const angle = Math.random() * Math.PI * 2;
-    const dist =
-      zone.minDistance + Math.random() * (zone.maxDistance - zone.minDistance);
+
+    // Bias spawn ring toward the player's current distance from center
+    const playerDist = Phaser.Math.Distance.Between(playerX, playerY, CENTER_X, CENTER_Y);
+    const minD = skipDistCheck
+      ? zone.minDistance
+      : Math.max(zone.minDistance, playerDist - 400);
+    const maxD = skipDistCheck
+      ? zone.maxDistance
+      : Math.min(zone.maxDistance, playerDist + 600);
+    const dist = minD + Math.random() * Math.max(maxD - minD, 0);
+
     const x = CENTER_X + Math.cos(angle) * dist;
     const y = CENTER_Y + Math.sin(angle) * dist;
 

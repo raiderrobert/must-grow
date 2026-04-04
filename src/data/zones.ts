@@ -22,7 +22,7 @@ export const ZONES: ZoneDefinition[] = [
     name: "Near-Earth Orbit",
     minDistance: 0,
     maxDistance: 1000,
-    maxObjects: 15,
+    maxObjects: 25,
     spawnTable: [
       {
         weight: 5,
