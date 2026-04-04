@@ -84,6 +84,22 @@ export class GameScene extends Phaser.Scene {
         if (obj) this.onCollision(obj);
       }
     );
+
+    // Overlap: player auto-collects debris on touch
+    this.physics.add.overlap(
+      this.player.body,
+      this.combat.debrisGroup,
+      (_playerSprite, debrisSprite) => {
+        const debris = (debrisSprite as Phaser.Physics.Arcade.Sprite).getData(
+          "debris"
+        ) as import("@/entities/Debris").Debris;
+        if (!debris) return;
+        this.resources.addMass(debris.mass);
+        this.resources.addEnergy(debris.energy);
+        this.audio.playWithVariation("sfx_pickup");
+        debris.destroy();
+      }
+    );
   }
 
   update(_time: number, delta: number): void {
