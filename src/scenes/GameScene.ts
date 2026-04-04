@@ -130,6 +130,13 @@ export class GameScene extends Phaser.Scene {
       1 + Math.log2(1 + this.resources.totalMassEarned) * 0.3;
     this.player.setSize(baseSize * growthFactor);
 
+    // Continuous camera zoom tracks station growth
+    const targetZoom = Math.max(1 / growthFactor, 0.2);
+    const currentZoom = this.cameras.main.zoom;
+    this.cameras.main.setZoom(
+      currentZoom + (targetZoom - currentZoom) * 0.02
+    );
+
     // 7. HUD
     this.hud.update();
 
@@ -145,8 +152,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private triggerEvolution(newTier: number): void {
-    const targetZoom = Math.max(1 - (newTier - 1) * 0.15, 0.3);
-    this.cameras.main.zoomTo(targetZoom, 2000, "Cubic.easeInOut");
+    // Dramatic zoom-out pulse, then continuous zoom resumes
+    const currentZoom = this.cameras.main.zoom;
+    this.cameras.main.zoomTo(currentZoom * 0.7, 1000, "Cubic.easeInOut");
 
     const tierName = getTierName(newTier);
     const text = this.add
