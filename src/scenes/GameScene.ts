@@ -10,6 +10,7 @@ import { CombatSystem } from "@/systems/CombatSystem";
 import { HUD } from "@/ui/HUD";
 import { UpgradeScreen } from "@/ui/UpgradeScreen";
 import { AudioManager } from "@/systems/AudioManager";
+import { InputManager } from "@/systems/InputManager";
 import type { SpaceObject } from "@/entities/SpaceObject";
 import type { DangerLevel } from "@/systems/GravitySystem";
 import { PLANET_DEFS, createPlanet } from "@/entities/PlanetObject";
@@ -23,6 +24,7 @@ export class GameScene extends Phaser.Scene {
   hud!: HUD;
   upgradeScreen!: UpgradeScreen;
   audio!: AudioManager;
+  inputManager!: InputManager;
 
   planets: SpaceObject[] = [];
   currentTier: number = 1;
@@ -77,11 +79,14 @@ export class GameScene extends Phaser.Scene {
     this.gravityIndicatorGraphics = this.add.graphics().setDepth(10);
     this.dangerVignette = this.add.graphics().setScrollFactor(0).setDepth(90);
 
+    this.inputManager = new InputManager(this);
+    this.player.setInputManager(this.inputManager);  // player reads movement from here
+
     this.combat = new CombatSystem(this, this.player, this.resources, this.zones);
     this.audio = new AudioManager(this);
     this.combat.setAudio(this.audio);
 
-    this.hud = new HUD(this, this.resources, this.combat, this.audio);
+    this.hud = new HUD(this, this.resources, this.combat, this.inputManager, this.audio);
 
     this.upgradeScreen = new UpgradeScreen(
       this, this.combat, this.resources, this.player, this.audio
@@ -163,17 +168,18 @@ export class GameScene extends Phaser.Scene {
       this.handleDeath();
     }
 
+    // Poll input first so all systems read consistent state this frame
+    this.inputManager.update();
+
     // Player movement
     this.player.isLocked = false;
-    if (this.player.isBoostHeld()) {
-      this.player.isBoosting = this.resources.drainBoost(delta);
-    } else {
-      this.player.isBoosting = false;
-    }
+    this.player.isBoosting = this.inputManager.isBoostHeld
+      ? this.resources.drainBoost(delta)
+      : false;
     this.player.update(delta);
 
     // Burst fire
-    if (this.player.consumeAttack()) {
+    if (this.inputManager.consumeAttack()) {
       this.combat.triggerBurst();
     }
 

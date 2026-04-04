@@ -6,26 +6,15 @@ import {
   WORLD_WIDTH,
   WORLD_HEIGHT,
 } from "@/constants";
+import type { InputManager } from "@/systems/InputManager";
 
 export class PlayerStation {
   body: Phaser.Physics.Arcade.Sprite;
   size: number;
   tier: number = 1;
   private scene: Phaser.Scene;
-  private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
-  private wasd: {
-    W: Phaser.Input.Keyboard.Key;
-    A: Phaser.Input.Keyboard.Key;
-    S: Phaser.Input.Keyboard.Key;
-    D: Phaser.Input.Keyboard.Key;
-  };
-  private attackKeys!: Phaser.Input.Keyboard.Key[];
-  private boostKey!: Phaser.Input.Keyboard.Key;
-  private pad: Phaser.Input.Gamepad.Gamepad | null = null;
   private thrustEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
-
-  // One-shot gamepad flags (set by event, cleared by consume methods)
-  private padAttackJust: boolean = false;
+  private input!: InputManager;
 
   isLocked: boolean = false;
   isBoosting: boolean = false;
@@ -33,20 +22,18 @@ export class PlayerStation {
   // Stats (modified by upgrades and cards)
   speed: number = PLAYER_BASE_SPEED;
   thrustPower: number = 50;
-  gravityResistance: number = 0; // 0 = full gravity, 0.9 = 90% reduction
+  gravityResistance: number = 0;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.size = PLAYER_START_SIZE;
 
-    // Create texture
     const textureKey = "player_station";
     const g = scene.add.graphics();
     this.drawStation(g, 32, 32, 32);
     g.generateTexture(textureKey, 64, 64);
     g.destroy();
 
-    // Physics sprite
     this.body = scene.physics.add.sprite(
       WORLD_WIDTH / 2,
       WORLD_HEIGHT / 2,
@@ -54,44 +41,15 @@ export class PlayerStation {
     );
     this.body.setCollideWorldBounds(true);
     this.body.setDamping(true);
-    this.body.setDrag(0.99); // snappy stop
+    this.body.setDrag(0.99);
     this.body.setScale(this.size / 32);
 
-    // Movement keys
-    this.cursors = scene.input.keyboard!.createCursorKeys();
-    this.wasd = {
-      W: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      A: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      S: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      D: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-    };
-
-    // Action keys
-    this.attackKeys = [
-      scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
-      scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.J),
-    ];
-    this.boostKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
-
-    // Gamepad support
-    if (scene.input.gamepad) {
-      scene.input.gamepad.once(
-        "connected",
-        (pad: Phaser.Input.Gamepad.Gamepad) => { this.pad = pad; }
-      );
-      scene.input.gamepad.on(
-        "down",
-        (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
-          if (button.index === 0) this.padAttackJust = true;
-        }
-      );
-    }
-
-    // Camera follow
     scene.cameras.main.startFollow(this.body, true, 0.08, 0.08);
-
-    // Particles
     this.initParticles();
+  }
+
+  setInputManager(im: InputManager): void {
+    this.input = im;
   }
 
   private drawStation(
@@ -105,12 +63,10 @@ export class PlayerStation {
     const points: Phaser.Geom.Point[] = [];
     for (let i = 0; i < sides; i++) {
       const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-      points.push(
-        new Phaser.Geom.Point(
-          cx + Math.cos(angle) * radius * 0.7,
-          cy + Math.sin(angle) * radius * 0.7
-        )
-      );
+      points.push(new Phaser.Geom.Point(
+        cx + Math.cos(angle) * radius * 0.7,
+        cy + Math.sin(angle) * radius * 0.7
+      ));
     }
     g.fillPoints(points, true);
     g.lineStyle(2, COLORS.stationGlow, 0.6);
@@ -127,7 +83,6 @@ export class PlayerStation {
       g.generateTexture("particle", 4, 4);
       g.destroy();
     }
-
     this.thrustEmitter = this.scene.add.particles(0, 0, "particle", {
       speed: { min: 20, max: 60 },
       scale: { start: 0.4, end: 0 },
@@ -141,11 +96,6 @@ export class PlayerStation {
   }
 
   update(_delta: number): void {
-    // Refresh gamepad reference
-    if (!this.pad && (this.scene.input.gamepad?.total ?? 0) > 0) {
-      this.pad = this.scene.input.gamepad!.getPad(0);
-    }
-
     if (this.isLocked) {
       this.body.setAccelerationX(0);
       this.body.setAccelerationY(0);
@@ -153,64 +103,20 @@ export class PlayerStation {
       return;
     }
 
-    const stickX = this.pad?.axes[0]?.getValue() ?? 0;
-    const stickY = this.pad?.axes[1]?.getValue() ?? 0;
+    const mx = this.input.moveX;
+    const my = this.input.moveY;
     const boostMult = this.isBoosting ? 2.0 : 1.0;
     const accel = this.speed * 8 * boostMult;
 
-    // Horizontal
-    if (this.cursors.left.isDown || this.wasd.A.isDown || stickX < -0.2) {
-      this.body.setAccelerationX(-accel * Math.max(Math.abs(stickX), 1));
-    } else if (this.cursors.right.isDown || this.wasd.D.isDown || stickX > 0.2) {
-      this.body.setAccelerationX(accel * Math.max(Math.abs(stickX), 1));
-    } else {
-      this.body.setAccelerationX(0);
-    }
+    this.body.setAccelerationX(mx !== 0 ? Math.sign(mx) * accel * Math.abs(mx) : 0);
+    this.body.setAccelerationY(my !== 0 ? Math.sign(my) * accel * Math.abs(my) : 0);
 
-    // Vertical
-    if (this.cursors.up.isDown || this.wasd.W.isDown || stickY < -0.2) {
-      this.body.setAccelerationY(-accel * Math.max(Math.abs(stickY), 1));
-    } else if (this.cursors.down.isDown || this.wasd.S.isDown || stickY > 0.2) {
-      this.body.setAccelerationY(accel * Math.max(Math.abs(stickY), 1));
-    } else {
-      this.body.setAccelerationY(0);
-    }
-
-    // Use Phaser's built-in maxVelocity
-    const maxSpeed = this.speed * (this.isBoosting ? 2.0 : 1.0);
+    const maxSpeed = this.speed * boostMult;
     (this.body.body as Phaser.Physics.Arcade.Body).setMaxVelocity(maxSpeed, maxSpeed);
 
-    // Thrust particles
-    const isThrusting =
-      this.cursors.up.isDown || this.wasd.W.isDown ||
-      this.cursors.down.isDown || this.wasd.S.isDown ||
-      this.cursors.left.isDown || this.wasd.A.isDown ||
-      this.cursors.right.isDown || this.wasd.D.isDown ||
-      Math.abs(stickX) > 0.2 || Math.abs(stickY) > 0.2;
-
     if (this.thrustEmitter) {
-      this.thrustEmitter.emitting = isThrusting;
+      this.thrustEmitter.emitting = this.input.isMoving;
     }
-  }
-
-  /** Returns true if Space/J or gamepad A was just pressed. Clears the flag. */
-  consumeAttack(): boolean {
-    const keyJustDown = this.attackKeys.some(k => Phaser.Input.Keyboard.JustDown(k));
-    const padJustDown = this.padAttackJust;
-    this.padAttackJust = false;
-    return keyJustDown || padJustDown;
-  }
-
-  /** Returns true while Shift or gamepad LB is held. */
-  isBoostHeld(): boolean {
-    const keyHeld = this.boostKey.isDown;
-    const padHeld = (this.pad?.buttons[4]?.pressed ?? false);
-    return keyHeld || padHeld;
-  }
-
-  /** Returns true if E or gamepad Start was just pressed. Clears the flag. */
-  getParticleEmitter(): Phaser.GameObjects.Particles.ParticleEmitter | undefined {
-    return this.thrustEmitter;
   }
 
   applyGravity(gx: number, gy: number): void {
@@ -219,15 +125,17 @@ export class PlayerStation {
     body.velocity.y += gy;
   }
 
+  getParticleEmitter(): Phaser.GameObjects.Particles.ParticleEmitter | undefined {
+    return this.thrustEmitter;
+  }
+
   get x(): number { return this.body.x; }
   get y(): number { return this.body.y; }
 
   setSize(newSize: number): void {
     this.size = newSize;
-    const scale = newSize / 32;
-    this.body.setScale(scale);
+    this.body.setScale(newSize / 32);
     const body = this.body.body as Phaser.Physics.Arcade.Body;
-    const radius = newSize;
-    body.setCircle(radius, 32 - radius, 32 - radius);
+    body.setCircle(newSize, 32 - newSize, 32 - newSize);
   }
 }

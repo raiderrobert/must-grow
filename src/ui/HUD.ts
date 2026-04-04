@@ -4,6 +4,7 @@ import { ResourceManager } from "@/systems/ResourceManager";
 import { getTierForMass, getTierName } from "@/data/tiers";
 import type { AudioManager } from "@/systems/AudioManager";
 import type { CombatSystem } from "@/systems/CombatSystem";
+import type { InputManager } from "@/systems/InputManager";
 
 export class HUD {
   private scene: Phaser.Scene;
@@ -16,6 +17,8 @@ export class HUD {
   private tierText!: Phaser.GameObjects.Text;
   private burstText!: Phaser.GameObjects.Text;
   private combat: CombatSystem | null = null;
+  private inputManager: InputManager | null = null;
+  private controlsHint!: Phaser.GameObjects.Text;
 
   // All tracked HUD objects for camera ignore
   private objects: Phaser.GameObjects.GameObject[] = [];
@@ -24,9 +27,11 @@ export class HUD {
     scene: Phaser.Scene,
     resources: ResourceManager,
     combat: CombatSystem | null = null,
+    inputManager: InputManager | null = null,
     audio?: AudioManager
   ) {
     this.combat = combat;
+    this.inputManager = inputManager;
     this.scene = scene;
     this.resources = resources;
 
@@ -51,17 +56,14 @@ export class HUD {
       this.objects.push(muteBtn);
     }
 
-    const hint = scene.add
-      .text(
-        20,
-        scene.scale.height - 16,
-        "WASD / stick move  ·  SPACE / A burst  ·  SHIFT / LB boost",
-        { fontFamily: "monospace", fontSize: "11px", color: "#444" }
-      )
+    this.controlsHint = scene.add
+      .text(20, scene.scale.height - 16, "", {
+        fontFamily: "monospace", fontSize: "11px", color: "#444",
+      })
       .setOrigin(0, 1)
       .setScrollFactor(0)
       .setDepth(100);
-    this.objects.push(hint);
+    this.objects.push(this.controlsHint);
   }
 
   /** Tell a camera to ignore all HUD objects (so they're only rendered by the UI camera). */
@@ -167,5 +169,12 @@ export class HUD {
     const canBurst = this.resources.canBurst && (this.combat?.burstCooldown ?? 0) <= 0;
     this.burstText.setText(canBurst ? "BURST ready [SPC]" : "");
     this.burstText.setColor(canBurst ? "#ffd93d" : "#555");
+
+    // Switch controls hint based on last active input device
+    if (this.inputManager?.isGamepad) {
+      this.controlsHint.setText("Left stick move  ·  A burst  ·  LB boost");
+    } else {
+      this.controlsHint.setText("WASD move  ·  SPACE burst  ·  SHIFT boost");
+    }
   }
 }
