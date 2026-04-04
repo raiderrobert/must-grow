@@ -112,7 +112,7 @@ describe("ResourceManager", () => {
       rm.drainEnergy(rm.energy);
       expect(rm.isSystemOnline("drones")).toBe(false);
       expect(rm.isSystemOnline("engines")).toBe(false);
-      expect(rm.activeShutdowns).toHaveLength(5);
+      expect(rm.activeShutdowns).toHaveLength(6); // gravityWell, drones, tractorBeam, autoTurrets, shields, engines
     });
 
     it("systems come back in reverse order as energy restores", () => {

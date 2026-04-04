@@ -312,7 +312,7 @@ export class CombatSystem {
   }
 
   updateGravityWell(delta: number, gravityWellLevel: number): void {
-    if (gravityWellLevel === 0 || !this.resources.isSystemOnline("drones")) return;
+    if (gravityWellLevel === 0 || !this.resources.isSystemOnline("gravityWell")) return;
 
     const range = 300 + gravityWellLevel * 100;
     const objects = this.zones.getObjects();

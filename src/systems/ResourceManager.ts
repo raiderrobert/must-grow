@@ -73,6 +73,7 @@ export class ResourceManager {
 
   /** Systems ordered by shutdown priority (first to go offline). */
   static readonly SHUTDOWN_ORDER = [
+    "gravityWell",
     "drones",
     "tractorBeam",
     "autoTurrets",
@@ -82,6 +83,7 @@ export class ResourceManager {
 
   /** Energy ratio thresholds where each system shuts down. */
   private static readonly SHUTDOWN_THRESHOLDS: Record<string, number> = {
+    gravityWell: 0.25,
     drones: 0.20,
     tractorBeam: 0.15,
     autoTurrets: 0.10,
