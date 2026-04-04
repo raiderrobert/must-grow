@@ -254,6 +254,9 @@ export class GameScene extends Phaser.Scene {
       const correction = 0.02;
       objBody.velocity.x += (idealVx - objBody.velocity.x) * correction;
       objBody.velocity.y += (idealVy - objBody.velocity.y) * correction;
+
+      // Keep damage overlay pinned to the moving sprite
+      obj.syncOverlay();
     }
 
     // Gravity on debris
@@ -339,7 +342,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Station growth + zoom
-    const growthFactor = 1 + Math.log2(1 + this.resources.totalMassEarned) * 0.5;
+    // Size grows dramatically with tier — visible jumps at each evolution
+    const tierSizeMultipliers = [1, 3, 6, 10, 15]; // T1 through T5
+    const tierIdx = Math.min(this.currentTier - 1, tierSizeMultipliers.length - 1);
+    const baseMult = tierSizeMultipliers[tierIdx];
+
+    // Smooth growth within current tier (up to 50% larger before next tier)
+    const currentThreshold = this.currentTier <= 1 ? 0 :
+      [0, 0, 100, 500, 2000, 10000][this.currentTier] ?? 0;
+    const nextThreshold = [0, 100, 500, 2000, 10000, 50000][this.currentTier] ?? 50000;
+    const tierProgress = Math.min(1,
+      (this.resources.totalMassEarned - currentThreshold) / (nextThreshold - currentThreshold)
+    );
+    const withinTierGrowth = 1 + tierProgress * 0.5; // up to 1.5x within a tier
+
+    const growthFactor = baseMult * withinTierGrowth;
     this.player.setSize(PLAYER_START_SIZE * growthFactor);
 
     // Keep player ~6px on screen regardless of size; zoom out as station grows
@@ -399,6 +416,23 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => text.destroy(),
     });
     this.audio.music.onTierChange(newTier);
+
+    // ── Tier power spike ──────────────────────────────────────────
+    // Each tier is 10x more powerful than the last
+    const tierMultiplier = Math.pow(10, newTier - 1); // T1=1, T2=10, T3=100, T4=1000, T5=10000
+
+    this.combat.beamRange = 300 * tierMultiplier;
+    this.combat.beamDamage = 10 * tierMultiplier;
+    this.combat.autoFireCooldown = Math.max(100, 900 / (1 + (newTier - 1) * 0.5)); // gets faster but capped
+
+    // Burst also scales
+    this.combat.burstShotCount = 3 + (newTier - 1) * 2;
+
+    // Debris pickup range scales with size
+    this.combat.debrisPickupRange = 80 * (1 + (newTier - 1) * 2);
+
+    // Camera shake for dramatic effect
+    this.cameras.main.shake(500, 0.01 * newTier);
   }
 
   private getBodyVelocity(bodyName: string): { vx: number; vy: number } {
