@@ -14,8 +14,6 @@ import type { SpaceObject } from "@/entities/SpaceObject";
 import type { DangerLevel } from "@/systems/GravitySystem";
 import { PLANET_DEFS, createPlanet } from "@/entities/PlanetObject";
 
-const UPGRADE_MILESTONE = 30; // trigger upgrade screen every N mass
-
 export class GameScene extends Phaser.Scene {
   player!: PlayerStation;
   resources!: ResourceManager;
@@ -28,7 +26,9 @@ export class GameScene extends Phaser.Scene {
 
   planets: SpaceObject[] = [];
   currentTier: number = 1;
-  private nextMilestone: number = UPGRADE_MILESTONE;
+  private upgradeCount: number = 0;
+  private nextMilestone: number = 50;
+  private readonly MILESTONE_SCALE = 1.6;
   private isPaused: boolean = false;
 
   private starfieldLayers!: Phaser.GameObjects.TileSprite[];
@@ -194,7 +194,6 @@ export class GameScene extends Phaser.Scene {
 
     // Upgrade milestone
     if (this.resources.totalMassEarned >= this.nextMilestone) {
-      this.nextMilestone += UPGRADE_MILESTONE;
       this.triggerUpgrade();
       return;
     }
@@ -219,6 +218,11 @@ export class GameScene extends Phaser.Scene {
   private triggerUpgrade(): void {
     this.isPaused = true;
     this.physics.world.pause();
+    this.upgradeCount++;
+    this.nextMilestone = Math.floor(
+      this.resources.totalMassEarned +
+        50 * Math.pow(this.MILESTONE_SCALE, this.upgradeCount)
+    );
 
     this.upgradeScreen.show(() => {
       this.isPaused = false;
