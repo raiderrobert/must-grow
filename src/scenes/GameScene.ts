@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, ZOOM_START, ZOOM_MIN, PLAYER_SPAWN_X, PLAYER_SPAWN_Y } from "@/constants";
+import { WORLD_WIDTH, WORLD_HEIGHT, COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, ZOOM_START, ZOOM_MIN, PLAYER_SPAWN_X, PLAYER_SPAWN_Y, ORBIT_SPEED_SCALE } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -15,6 +15,7 @@ import { InputManager } from "@/systems/InputManager";
 import { SpaceObject } from "@/entities/SpaceObject";
 
 import { BODY_DEFS } from "@/data/bodies";
+import { createOrbitStates, stepOrbit, type OrbitState } from "@/systems/OrbitSystem";
 import { renderBody, type RenderedBody } from "@/entities/BodyRenderer";
 import type { GravityBody } from "@/systems/GravitySystem";
 
@@ -38,6 +39,7 @@ export class GameScene extends Phaser.Scene {
   inputManager!: InputManager;
 
   private trackedBodies: TrackedBody[] = [];
+  private orbitStates: OrbitState[] = [];
   currentTier: number = 1;
   private upgradeCount: number = 0;
   private nextMilestone: number = 50;
@@ -87,9 +89,12 @@ export class GameScene extends Phaser.Scene {
       const gravityBody: GravityBody = { x, y, gravityMass: def.gravityMass, killRadius: def.killRadius };
       this.gravity.addBody(gravityBody);
 
+      rendered.graphics.setData("origX", x);
+      rendered.graphics.setData("origY", y);
       this.trackedBodies.push({ name: def.name, spaceObj, rendered, gravityBody });
     }
 
+    this.orbitStates = createOrbitStates(BODY_DEFS);
     this.zones.populate(this.player.x, this.player.y, 1);
 
     this.gravityIndicatorGraphics = this.add.graphics().setDepth(10);
@@ -183,6 +188,9 @@ export class GameScene extends Phaser.Scene {
       pull.x * (delta / 1000) * GRAVITY_SCALE * resist,
       pull.y * (delta / 1000) * GRAVITY_SCALE * resist
     );
+
+    // Update planet orbits (must run before kill zone check)
+    this.updateOrbits(delta);
 
     // Gravity on all zone objects (makes them orbit)
     for (const obj of this.zones.getObjects()) {
@@ -360,6 +368,42 @@ export class GameScene extends Phaser.Scene {
     const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
     this.player.body.body!.velocity.x += (dx / dist) * 200;
     this.player.body.body!.velocity.y += (dy / dist) * 200;
+  }
+
+  private updateOrbits(delta: number): void {
+    for (const orbit of this.orbitStates) {
+      const parent = this.trackedBodies.find(tb => tb.name === orbit.parentName);
+      if (!parent) continue;
+
+      const result = stepOrbit(
+        orbit.currentAngle, orbit.distance, orbit.orbitSpeed,
+        delta, ORBIT_SPEED_SCALE,
+        parent.gravityBody.x, parent.gravityBody.y
+      );
+      orbit.currentAngle = result.angle;
+
+      const tracked = this.trackedBodies.find(tb => tb.name === orbit.bodyName);
+      if (!tracked) continue;
+
+      tracked.gravityBody.x = result.x;
+      tracked.gravityBody.y = result.y;
+
+      const origX = tracked.rendered.graphics.getData("origX") as number;
+      const origY = tracked.rendered.graphics.getData("origY") as number;
+      if (origX !== undefined && origY !== undefined) {
+        tracked.rendered.graphics.setPosition(result.x - origX, result.y - origY);
+        if (tracked.rendered.debugRing) {
+          tracked.rendered.debugRing.setPosition(result.x - origX, result.y - origY);
+        }
+      }
+
+      const bodyDef = BODY_DEFS.find(d => d.name === orbit.bodyName);
+      const labelRadius = bodyDef?.visualRadius ?? tracked.spaceObj.config.size;
+      const labelFontSize = Math.max(24, Math.min(labelRadius * 0.12, 400));
+      tracked.rendered.label.setPosition(result.x, result.y + labelRadius + labelFontSize * 1.5);
+
+      tracked.spaceObj.sprite.setPosition(result.x, result.y);
+    }
   }
 
   private updateGravityIndicator(): void {
