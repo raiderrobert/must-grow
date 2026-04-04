@@ -31,8 +31,7 @@ export class HUD {
     this.generatorButton = new GeneratorButton(
       scene,
       80,
-      scene.scale.height - 40,
-      resources
+      scene.scale.height - 40
     );
     if (audio) {
       this.generatorButton.setAudio(audio);

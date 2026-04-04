@@ -68,9 +68,6 @@ export class CombatSystem {
       g.destroy();
     }
 
-    scene.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      this.handleClick(pointer);
-    });
   }
 
   setUpgrades(upgrades: UpgradeManager): void {
@@ -81,76 +78,60 @@ export class CombatSystem {
     this.audio = audio;
   }
 
-  private handleClick(pointer: Phaser.Input.Pointer): void {
-    const worldPoint = this.scene.cameras.main.getWorldPoint(
-      pointer.x,
-      pointer.y
-    );
-
-    // If clamped, chew
+  /** Called when the player presses the attack button. */
+  attackPressed(): void {
     if (this.clampedTarget) {
       this.chew();
       return;
     }
 
-    // Try to collect nearby debris first
-    for (const d of this.debrisList) {
-      if (!d.sprite.active) continue;
-      const dist = Phaser.Math.Distance.Between(
-        worldPoint.x,
-        worldPoint.y,
-        d.sprite.x,
-        d.sprite.y
-      );
-      if (dist < 30) {
-        this.collectDebris(d);
-        return;
-      }
-    }
-
-    // Find clicked target
-    const objects = this.zones.getObjects();
-    let closest: SpaceObject | null = null;
-    let closestDist = Infinity;
-
-    for (const obj of objects) {
-      const dist = Phaser.Math.Distance.Between(
-        worldPoint.x,
-        worldPoint.y,
-        obj.sprite.x,
-        obj.sprite.y
-      );
-      if (dist < obj.config.size + 20 && dist < closestDist) {
-        closest = obj;
-        closestDist = dist;
-      }
-    }
-
-    if (!closest) return;
-
-    const distToPlayer = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      closest.sprite.x,
-      closest.sprite.y
-    );
-
     if (this.player.tier === 1) {
-      if (distToPlayer <= this.clampRange) {
-        this.clampedTarget = closest;
-        closest.isBeingChewed = true;
-        // Apply chew speed — reduce clicks needed
+      // Find nearest object in clamp range
+      const objects = this.zones.getObjects();
+      let nearest: SpaceObject | null = null;
+      let nearestDist = this.clampRange;
+
+      for (const obj of objects) {
+        const dist = Phaser.Math.Distance.Between(
+          this.player.x, this.player.y,
+          obj.sprite.x, obj.sprite.y
+        );
+        if (dist < nearestDist) {
+          nearest = obj;
+          nearestDist = dist;
+        }
+      }
+
+      if (nearest) {
+        this.clampedTarget = nearest;
+        nearest.isBeingChewed = true;
         const reducedClicks = Math.max(
-          Math.ceil(closest.chewClicksRemaining / this.chewSpeedMultiplier),
+          Math.ceil(nearest.chewClicksRemaining / this.chewSpeedMultiplier),
           1
         );
-        closest.chewClicksRemaining = reducedClicks;
+        nearest.chewClicksRemaining = reducedClicks;
         this.chew();
       }
     } else {
-      if (distToPlayer <= this.beamRange && this.beamCooldown <= 0) {
-        this.fireBeam(closest);
+      // Fire beam at nearest object in range
+      if (this.beamCooldown > 0) return;
+
+      const objects = this.zones.getObjects();
+      let nearest: SpaceObject | null = null;
+      let nearestDist = this.beamRange;
+
+      for (const obj of objects) {
+        const dist = Phaser.Math.Distance.Between(
+          this.player.x, this.player.y,
+          obj.sprite.x, obj.sprite.y
+        );
+        if (dist < nearestDist) {
+          nearest = obj;
+          nearestDist = dist;
+        }
       }
+
+      if (nearest) this.fireBeam(nearest);
     }
   }
 

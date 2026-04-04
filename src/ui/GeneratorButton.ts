@@ -1,50 +1,27 @@
 import Phaser from "phaser";
 import { COLORS } from "@/constants";
-import { ResourceManager } from "@/systems/ResourceManager";
-import type { AudioManager } from "@/systems/AudioManager";
 
+/** Displays a hint showing the power key — no longer interactive (use K or gamepad B). */
 export class GeneratorButton {
-  private container: Phaser.GameObjects.Container;
-  private bg: Phaser.GameObjects.Rectangle;
-  private resources: ResourceManager;
-  private audio: AudioManager | null = null;
-
-  constructor(
-    scene: Phaser.Scene,
-    x: number,
-    y: number,
-    resources: ResourceManager
-  ) {
-    this.resources = resources;
-
-    this.bg = scene.add
-      .rectangle(0, 0, 120, 40, COLORS.energy, 0.3)
-      .setStrokeStyle(2, COLORS.energy);
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    const bg = scene.add
+      .rectangle(0, 0, 130, 40, COLORS.energy, 0.15)
+      .setStrokeStyle(1, COLORS.energy, 0.4);
 
     const label = scene.add
-      .text(0, 0, "⚡ POWER", {
+      .text(0, 0, "⚡ [K] POWER", {
         fontFamily: "monospace",
-        fontSize: "14px",
+        fontSize: "13px",
         color: "#ffd93d",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setAlpha(0.7);
 
-    this.container = scene.add.container(x, y, [this.bg, label]);
-    this.container.setScrollFactor(0);
-    this.container.setDepth(100);
-
-    this.bg.setInteractive({ useHandCursor: true });
-    this.bg.on("pointerdown", () => {
-      this.resources.manualGenerate();
-      this.audio?.play("sfx_power_up");
-      this.bg.setFillStyle(COLORS.energy, 0.6);
-      scene.time.delayedCall(100, () => {
-        this.bg.setFillStyle(COLORS.energy, 0.3);
-      });
-    });
+    const container = scene.add.container(x, y, [bg, label]);
+    container.setScrollFactor(0);
+    container.setDepth(100);
   }
 
-  setAudio(audio: AudioManager): void {
-    this.audio = audio;
-  }
+  // No-op — kept so HUD constructor call is unchanged
+  setAudio(_audio: unknown): void {}
 }
