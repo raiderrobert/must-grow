@@ -340,7 +340,7 @@ export class GameScene extends Phaser.Scene {
       const idealVx = tangentX * idealSpeed + (dominant.velocityX ?? 0);
       const idealVy = tangentY * idealSpeed + (dominant.velocityY ?? 0);
 
-      const correction = 0.02;
+      const correction = 0.15;
       objBody.velocity.x += (idealVx - objBody.velocity.x) * correction;
       objBody.velocity.y += (idealVy - objBody.velocity.y) * correction;
 
