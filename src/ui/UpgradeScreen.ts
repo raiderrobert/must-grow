@@ -230,17 +230,19 @@ export class UpgradeScreen {
   }
 
   forceClose(): void {
-    if (!this.isVisible) return;
     this.isVisible = false;
+    this.inputReady = false;
+    this.onClose = undefined;
     for (const key of this.keyObjects) key.removeAllListeners();
     this.gamepadPollTimer?.remove();
     this.gamepadPollTimer = undefined;
     this.cardBackgrounds = [];
     this.currentCards = [];
     this.keyObjects = [];
-    this.container?.destroy();
-    this.container = null;
-    // Don't call onClose — the win screen handles the unpause
+    if (this.container) {
+      this.container.destroy(true); // true = destroy children too
+      this.container = null;
+    }
   }
 
   private pick(card: UpgradeCard): void {
