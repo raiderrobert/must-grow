@@ -273,6 +273,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    // Input polling and menu toggle must run even when paused
+    this.inputManager.update();
+
+    if (this.inputManager.consumeMenuToggle()) {
+      this.settingsMenu.toggle();
+      if (this.settingsMenu.visible) {
+        this.isPaused = true;
+        this.physics.world.pause();
+      } else {
+        this.isPaused = false;
+        this.physics.world.resume();
+      }
+      return;
+    }
+
     if (this.isPaused) return;
 
     this.elapsedTime += delta;
@@ -348,21 +363,6 @@ export class GameScene extends Phaser.Scene {
       if (!this.godMode) {
         this.handleDeath();
       }
-    }
-
-    // Poll input first so all systems read consistent state this frame
-    this.inputManager.update();
-
-    if (this.inputManager.consumeMenuToggle()) {
-      this.settingsMenu.toggle();
-      if (this.settingsMenu.visible) {
-        this.isPaused = true;
-        this.physics.world.pause();
-      } else {
-        this.isPaused = false;
-        this.physics.world.resume();
-      }
-      return;
     }
 
     // Player movement
