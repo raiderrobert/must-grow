@@ -717,72 +717,148 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showWinScreen(): void {
+    // Dismiss upgrade screen if open
+    if (this.upgradeScreen) {
+      this.upgradeScreen.forceClose();
+    }
+
     this.isPaused = true;
     this.physics.world.pause();
 
     const { width, height } = this.scale;
 
-    // Dark overlay
-    const overlay = this.add
-      .rectangle(width / 2, height / 2, width, height, 0x000000, 0.85)
-      .setScrollFactor(0)
-      .setDepth(600);
+    // ── Fanfare ──
+    this.cameras.main.flash(1000, 255, 215, 0); // gold flash
+    this.cameras.main.shake(2000, 0.015);
+    this.audio.play("sfx_tier_up");
 
-    // Format elapsed time
-    const totalSeconds = Math.floor(this.elapsedTime / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const timeStr = `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+    // Explosion particles across the screen
+    for (let i = 0; i < 8; i++) {
+      const px = width * 0.2 + Math.random() * width * 0.6;
+      const py = height * 0.2 + Math.random() * height * 0.6;
+      const colors = [0xffd93d, 0xff6b6b, 0x6c63ff, 0x4ecdc4, 0xffaa00];
+      const particles = this.add.particles(px, py, "particle", {
+        speed: { min: 100, max: 300 },
+        scale: { start: 1.0, end: 0 },
+        tint: colors[i % colors.length],
+        lifespan: 2000,
+        quantity: 20,
+        emitting: false,
+      }).setScrollFactor(0).setDepth(610);
+      this.time.delayedCall(i * 200, () => particles.explode(20));
+      this.time.delayedCall(3000, () => particles.destroy());
+    }
 
-    // Title
-    this.add
-      .text(width / 2, height * 0.35, "YOU WIN", {
-        fontFamily: "monospace",
-        fontSize: "64px",
-        color: "#ffd93d",
-        stroke: "#000",
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(601);
+    // ── Win screen UI (delayed slightly so fanfare plays first) ──
+    this.time.delayedCall(500, () => {
+      // Dark overlay
+      const overlay = this.add
+        .rectangle(width / 2, height / 2, width, height, 0x000000, 0.85)
+        .setScrollFactor(0)
+        .setDepth(600);
 
-    // Subtitle
-    this.add
-      .text(width / 2, height * 0.35 + 80, "The solar system has been destroyed.", {
-        fontFamily: "monospace",
-        fontSize: "16px",
-        color: "#aaa",
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(601);
+      // Format elapsed time
+      const totalSeconds = Math.floor(this.elapsedTime / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const timeStr = `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
 
-    // Time
-    this.add
-      .text(width / 2, height * 0.55, `Time: ${timeStr}`, {
-        fontFamily: "monospace",
-        fontSize: "28px",
-        color: "#4ecdc4",
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(601);
+      // Title — animates in
+      const title = this.add
+        .text(width / 2, height * 0.3, "YOU WIN", {
+          fontFamily: "monospace",
+          fontSize: "72px",
+          color: "#ffd93d",
+          stroke: "#000",
+          strokeThickness: 8,
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(601)
+        .setAlpha(0)
+        .setScale(0.5);
 
-    // Stats
-    this.add
-      .text(width / 2, height * 0.55 + 50, `Total mass consumed: ${Math.floor(this.resources.totalMassEarned).toLocaleString()}`, {
-        fontFamily: "monospace",
-        fontSize: "14px",
-        color: "#888",
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(601);
+      this.tweens.add({
+        targets: title,
+        alpha: 1,
+        scale: 1,
+        duration: 800,
+        ease: "Back.easeOut",
+      });
 
-    // Ignore all win screen objects from main camera (render on UI camera only)
-    // The overlay and text use setScrollFactor(0) which is enough for the UI camera
-    this.cameras.main.ignore([overlay]);
+      // Subtitle
+      const subtitle = this.add
+        .text(width / 2, height * 0.3 + 80, "The solar system has been destroyed.", {
+          fontFamily: "monospace",
+          fontSize: "16px",
+          color: "#aaa",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(601)
+        .setAlpha(0);
+
+      this.tweens.add({
+        targets: subtitle,
+        alpha: 1,
+        duration: 600,
+        delay: 600,
+      });
+
+      // Time
+      this.add
+        .text(width / 2, height * 0.5, `Time: ${timeStr}`, {
+          fontFamily: "monospace",
+          fontSize: "32px",
+          color: "#4ecdc4",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(601);
+
+      // Stats
+      this.add
+        .text(width / 2, height * 0.5 + 50, `Total mass consumed: ${Math.floor(this.resources.totalMassEarned).toLocaleString()}`, {
+          fontFamily: "monospace",
+          fontSize: "14px",
+          color: "#888",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(601);
+
+      // Restart button
+      const restartBtn = this.add
+        .text(width / 2, height * 0.7, "[ PLAY AGAIN ]", {
+          fontFamily: "monospace",
+          fontSize: "24px",
+          color: "#4ecdc4",
+          backgroundColor: "#1a1a2e",
+          padding: { x: 24, y: 12 },
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(602)
+        .setInteractive({ useHandCursor: true });
+
+      restartBtn.on("pointerover", () => restartBtn.setColor("#fff"));
+      restartBtn.on("pointerout", () => restartBtn.setColor("#4ecdc4"));
+      restartBtn.on("pointerdown", () => this.scene.restart());
+
+      // Keyboard restart
+      const restartKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+      restartKey.once("down", () => this.scene.restart());
+      const spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      spaceKey.once("down", () => this.scene.restart());
+
+      // Gamepad A button restart
+      if (this.input.gamepad) {
+        this.input.gamepad.once("down", () => this.scene.restart());
+      }
+
+      // Ignore overlay from main camera
+      this.cameras.main.ignore([overlay]);
+    });
   }
 
   onCollision(obj: SpaceObject): void {
