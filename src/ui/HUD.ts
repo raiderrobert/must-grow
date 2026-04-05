@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import { COLORS } from "@/constants";
 import { ResourceManager } from "@/systems/ResourceManager";
 import { getTierForMass, getTierName } from "@/data/tiers";
-import type { AudioManager } from "@/systems/AudioManager";
 import type { CombatSystem } from "@/systems/CombatSystem";
 import type { InputManager } from "@/systems/InputManager";
 
@@ -37,7 +36,6 @@ export class HUD {
     resources: ResourceManager,
     combat: CombatSystem | null = null,
     inputManager: InputManager | null = null,
-    audio?: AudioManager
   ) {
     this.combat = combat;
     this.inputManager = inputManager;
@@ -50,22 +48,6 @@ export class HUD {
     this.createTierProgress();
     this.createWeaponSlot();
     this.createKillTracker();
-
-    if (audio) {
-      const muteBtn = scene.add
-        .text(scene.scale.width - 40, scene.scale.height - 175, "🔊", {
-          fontFamily: "monospace",
-          fontSize: "20px",
-        })
-        .setScrollFactor(0)
-        .setDepth(100)
-        .setInteractive({ useHandCursor: true });
-      muteBtn.on("pointerdown", () => {
-        const muted = audio.toggleMute();
-        muteBtn.setText(muted ? "🔇" : "🔊");
-      });
-      this.objects.push(muteBtn);
-    }
 
     this.controlsHint = scene.add
       .text(20, scene.scale.height - 16, "", {
@@ -125,6 +107,28 @@ export class HUD {
     for (const obj of this.objects) {
       (obj as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(visible);
     }
+  }
+
+  /** Reposition edge-anchored elements after a window resize. */
+  reposition(width: number, height: number): void {
+    // Controls hint — bottom-left
+    this.controlsHint.setPosition(20, height - 16);
+
+    // Kill tracker — centered top
+    const bodyCount = this.killTrackerTexts.length;
+    const startX = width / 2 - (bodyCount * 70) / 2;
+    for (let i = 0; i < bodyCount; i++) {
+      this.killTrackerTexts[i].setX(startX + i * 70 + 35);
+    }
+
+    // Weapon slot — top-right
+    const slotW = 100;
+    const x = width - slotW - 12;
+    const y = 12;
+    this.weaponSlotBg.setPosition(x + slotW / 2, y + 36 / 2);
+    this.weaponSlotFill.setPosition(x + 2, y + 36 - 6);
+    this.weaponSlotLabel.setPosition(x + slotW / 2, y + 10);
+    this.weaponSlotHint.setPosition(x + slotW / 2, y + 24);
   }
 
   /** Tell a camera to ignore all HUD objects (so they're only rendered by the UI camera). */

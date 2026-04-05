@@ -9,7 +9,19 @@
       "Bash(pnpm exec:*)",
       "Bash(pnpm test:*)",
       "Bash(pnpm build:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git worktree:*)",
+      "Bash(pnpm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git merge:*)",
+      "Bash(git branch:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(kill %1)",
+      "Bash(grep:*)"
     ]
   }
 }

@@ -64,6 +64,7 @@ export class GameScene extends Phaser.Scene {
   private starfieldLayers!: Phaser.GameObjects.TileSprite[];
   private gravityIndicatorGraphics!: Phaser.GameObjects.Graphics;
   private dangerVignette!: Phaser.GameObjects.Graphics;
+  private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private collisionCooldowns: WeakSet<Phaser.Physics.Arcade.Sprite> = new WeakSet();
 
   constructor() {
@@ -142,7 +143,7 @@ export class GameScene extends Phaser.Scene {
     this.combat.setAudio(this.audio);
 
     this.earthDefense = new EarthDefense(this, this.zones, this.resources);
-    this.hud = new HUD(this, this.resources, this.combat, this.inputManager, this.audio);
+    this.hud = new HUD(this, this.resources, this.combat, this.inputManager);
     this.minimap = new Minimap(this, this.gravity);
     this.minimap.setVisible(false); // unlocked at Act II
     this.trajectoryPredictor = new TrajectoryPredictor(this, this.gravity);
@@ -173,9 +174,9 @@ export class GameScene extends Phaser.Scene {
 
     // ── Two-camera setup ──────────────────────────────────────────
     const { width, height } = this.scale;
-    const uiCam = this.cameras.add(0, 0, width, height);
-    uiCam.setZoom(1);
-    uiCam.transparent = true;
+    this.uiCam = this.cameras.add(0, 0, width, height);
+    this.uiCam.setZoom(1);
+    this.uiCam.transparent = true;
 
     // uiCam ignores all world objects
     const worldObjects: Phaser.GameObjects.GameObject[] = [
@@ -193,15 +194,15 @@ export class GameScene extends Phaser.Scene {
       ...this.combat.getWorldGraphics(),
       this.earthDefense.getGraphics(),
     ];
-    uiCam.ignore(worldObjects);
-    uiCam.ignore(this.zones.objectGroup);
-    uiCam.ignore(this.combat.debrisGroup);
+    this.uiCam.ignore(worldObjects);
+    this.uiCam.ignore(this.zones.objectGroup);
+    this.uiCam.ignore(this.combat.debrisGroup);
 
     // Future-spawned world sprites auto-ignored by uiCam
     (this.zones.objectGroup as unknown as { addCallback: (item: Phaser.GameObjects.GameObject) => void }).addCallback =
-      (item) => uiCam.ignore(item);
+      (item) => this.uiCam.ignore(item);
     (this.combat.debrisGroup as unknown as { addCallback: (item: Phaser.GameObjects.GameObject) => void }).addCallback =
-      (item) => uiCam.ignore(item);
+      (item) => this.uiCam.ignore(item);
 
     // main camera ignores HUD; also tell dangerVignette to go to uiCam only
     const hudObjects = [...this.hud.getObjects(), ...this.minimap.getObjects(), this.dangerVignette];
@@ -210,6 +211,15 @@ export class GameScene extends Phaser.Scene {
     // UpgradeScreen overlay: tell it to use uiCam (ignore from main)
     this.upgradeScreen.setMainCamera(this.cameras.main);
     this.minimap.setMainCamera(this.cameras.main);
+
+    // Reposition UI elements when window resizes
+    this.scale.on("resize", (gameSize: Phaser.Structs.Size) => {
+      const w = gameSize.width;
+      const h = gameSize.height;
+      this.uiCam.setSize(w, h);
+      this.hud.reposition(w, h);
+      this.minimap.reposition(w, h);
+    });
 
     this.settingsMenu = new SettingsMenu(this, {
       setTier: (tier: number) => {
@@ -280,8 +290,13 @@ export class GameScene extends Phaser.Scene {
       getPlanetNames: () => {
         return this.trackedBodies.map(tb => tb.name);
       },
-    } satisfies CheatCallbacks);
+    } satisfies CheatCallbacks, this.audio);
     this.settingsMenu.setMainCamera(this.cameras.main);
+    this.settingsMenu.setInputManager(this.inputManager);
+    this.settingsMenu.setOnHide(() => {
+      this.isPaused = false;
+      this.physics.world.resume();
+    });
 
     // (player position set dynamically in spawnNearEarth below)
 
@@ -798,7 +813,7 @@ export class GameScene extends Phaser.Scene {
 
     // Title
     const title = this.add
-      .text(width / 2, height * 0.12, "I must grow.", {
+      .text(width / 2, height * 0.10, "I must grow.", {
         fontFamily: "monospace",
         fontSize: "56px",
         color: "#ffd93d",
@@ -813,7 +828,7 @@ export class GameScene extends Phaser.Scene {
 
     // "Systems damaged. Repair protocol initiated." — fades in with delay, pulses gently
     const hunger = this.add
-      .text(width / 2, height * 0.12 + 70, "", {
+      .text(width / 2, height * 0.10 + 70, "", {
         fontFamily: "monospace",
         fontSize: "18px",
         color: "#ff6b6b",
@@ -825,18 +840,20 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0);
     objects.push(hunger);
 
-    // Typewriter effect
+    // Typewriter effect — wait 800ms, then reveal one character every 80ms
     const hungerText = '"Systems damaged. Repair protocol initiated."';
     let charIdx = 0;
-    this.time.addEvent({
-      delay: 80,
-      repeat: hungerText.length - 1,
-      startAt: 800, // wait 800ms before starting
-      callback: () => {
-        charIdx++;
-        hunger.setText(hungerText.substring(0, charIdx));
-        hunger.setAlpha(1);
-      },
+    this.time.delayedCall(800, () => {
+      this.time.addEvent({
+        delay: 80,
+        repeat: hungerText.length - 1,
+        callback: () => {
+          if (!hunger.active) return;
+          charIdx++;
+          hunger.setText(hungerText.substring(0, charIdx));
+          hunger.setAlpha(1);
+        },
+      });
     });
 
     // Gentle pulse after typewriter finishes
@@ -853,53 +870,62 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
+    // Staggered fade-in for sections below the title
+    const fadeIn = (obj: Phaser.GameObjects.Text, delay: number) => {
+      obj.setAlpha(0);
+      this.tweens.add({
+        targets: obj,
+        alpha: 1,
+        duration: 400,
+        delay,
+        ease: "Quad.easeOut",
+      });
+    };
+
     // ── How to play ──
-    objects.push(
-      this.add
-        .text(width / 2, height * 0.32, "HOW TO PLAY", {
-          fontFamily: "monospace",
-          fontSize: "18px",
-          color: "#6c63ff",
-        })
-        .setOrigin(0.5)
-        .setScrollFactor(0)
-        .setDepth(801)
-    );
+    const howHeader = this.add
+      .text(width / 2, height * 0.30, "HOW TO PLAY", {
+        fontFamily: "monospace",
+        fontSize: "18px",
+        color: "#6c63ff",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(801);
+    objects.push(howHeader);
+    fadeIn(howHeader, 400);
 
     const instructions = [
       "You are a damaged repair bot in Earth orbit.",
-      "Consume orbital debris to repair your systems.",
-      "Grow stronger. Upgrade your capabilities.",
-      "But the hunger doesn't stop...",
-      "Devour everything. Even the Sun.",
+      "Consume debris to repair your systems.",
     ];
 
     for (let i = 0; i < instructions.length; i++) {
-      objects.push(
-        this.add
-          .text(width / 2, height * 0.32 + 32 + i * 24, instructions[i], {
-            fontFamily: "monospace",
-            fontSize: "15px",
-            color: "#aaa",
-          })
-          .setOrigin(0.5)
-          .setScrollFactor(0)
-          .setDepth(801)
-      );
-    }
-
-    // ── Controls ──
-    objects.push(
-      this.add
-        .text(width / 2, height * 0.62, "CONTROLS", {
+      const line = this.add
+        .text(width / 2, height * 0.30 + 30 + i * 24, instructions[i], {
           fontFamily: "monospace",
-          fontSize: "18px",
-          color: "#6c63ff",
+          fontSize: "15px",
+          color: "#999",
         })
         .setOrigin(0.5)
         .setScrollFactor(0)
-        .setDepth(801)
-    );
+        .setDepth(801);
+      objects.push(line);
+      fadeIn(line, 500 + i * 80);
+    }
+
+    // ── Controls ──
+    const ctrlHeader = this.add
+      .text(width / 2, height * 0.50, "CONTROLS", {
+        fontFamily: "monospace",
+        fontSize: "18px",
+        color: "#6c63ff",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(801);
+    objects.push(ctrlHeader);
+    fadeIn(ctrlHeader, 650);
 
     const controls = [
       "WASD / Left Stick ····· Move",
@@ -909,38 +935,49 @@ export class GameScene extends Phaser.Scene {
     ];
 
     for (let i = 0; i < controls.length; i++) {
-      objects.push(
-        this.add
-          .text(width / 2, height * 0.62 + 28 + i * 22, controls[i], {
-            fontFamily: "monospace",
-            fontSize: "14px",
-            color: "#888",
-          })
-          .setOrigin(0.5)
-          .setScrollFactor(0)
-          .setDepth(801)
-      );
+      const line = this.add
+        .text(width / 2, height * 0.50 + 30 + i * 24, controls[i], {
+          fontFamily: "monospace",
+          fontSize: "14px",
+          color: "#999",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(801);
+      objects.push(line);
+      fadeIn(line, 730 + i * 80);
     }
 
     // ── Start prompt — pulses ──
     const prompt = this.add
-      .text(width / 2, height * 0.86, "[ PRESS SPACE OR ANY BUTTON TO BEGIN ]", {
+      .text(width / 2, height * 0.82, "[ PRESS SPACE OR ANY BUTTON TO BEGIN ]", {
         fontFamily: "monospace",
         fontSize: "18px",
         color: "#4ecdc4",
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(801);
+      .setDepth(801)
+      .setAlpha(0);
     objects.push(prompt);
 
+    // Prompt fades in after other sections, then pulses
     this.tweens.add({
       targets: prompt,
-      alpha: 0.3,
-      yoyo: true,
-      repeat: -1,
-      duration: 800,
-      ease: "Sine.easeInOut",
+      alpha: 1,
+      duration: 400,
+      delay: 1100,
+      ease: "Quad.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: prompt,
+          alpha: 0.3,
+          yoyo: true,
+          repeat: -1,
+          duration: 1200,
+          ease: "Sine.easeInOut",
+        });
+      },
     });
 
     this.cameras.main.ignore(objects);

@@ -17,6 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
     arcade: {
       gravity: { x: 0, y: 0 },
       debug: false,
+      fixedStep: false,
     },
   },
   scene: [BootScene, GameScene],
@@ -24,6 +25,9 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     zoom: 1 / dpr,
+  },
+  render: {
+    roundPixels: true,
   },
 };
 

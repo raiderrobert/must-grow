@@ -68,6 +68,11 @@ export class Minimap {
     this.mainCamera = camera;
   }
 
+  reposition(width: number, height: number): void {
+    this.mapX = width - MAP_SIZE - MAP_MARGIN;
+    this.mapY = height - MAP_SIZE - MAP_MARGIN;
+  }
+
   private rebuildBodyInfo(): void {
     this.bodyInfoMap.clear();
     for (const body of this.gravity.getBodies()) {
