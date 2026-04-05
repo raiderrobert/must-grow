@@ -21,6 +21,12 @@ export class SpaceObject {
   readonly maxHealth: number;
   isBeingChewed: boolean = false; // kept for compatibility
 
+  // Prescribed orbit state (set when orbiting a planet)
+  orbitParentName: string | null = null;
+  orbitAngle: number = 0;
+  orbitRadius: number = 0;
+  orbitAngularSpeed: number = 0;
+
   private scene: Phaser.Scene;
   private damageOverlay?: Phaser.GameObjects.Graphics;
 
@@ -90,6 +96,13 @@ export class SpaceObject {
       const a = ((seed * (i + 1) * 137.5) % 360) * (Math.PI / 180);
       const len = r * (0.5 + ((seed * (i + 3)) % 50) / 100);
       this.damageOverlay.lineBetween(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+    }
+  }
+
+  /** Call each frame to keep the damage overlay positioned on the moving sprite. */
+  syncOverlay(): void {
+    if (this.damageOverlay && this.sprite.active) {
+      this.damageOverlay.setPosition(this.sprite.x, this.sprite.y);
     }
   }
 

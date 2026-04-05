@@ -311,45 +311,38 @@ export class GameScene extends Phaser.Scene {
     // Update planet orbits (must run before kill zone check)
     this.updateOrbits(delta);
 
-    // Gravity + orbital correction on all zone objects
+    // Update zone object positions — prescribed orbits or gravity
     for (const obj of this.zones.getObjects()) {
       if (!obj.sprite.active || !obj.sprite.body) continue;
-      const ox = obj.sprite.x;
-      const oy = obj.sprite.y;
 
-      const dominant = this.gravity.getDominantBody(ox, oy);
-      if (!dominant) continue;
+      if (obj.orbitParentName) {
+        // ── Prescribed orbit mode ──
+        const parent = this.trackedBodies.find(tb => tb.name === obj.orbitParentName);
+        if (!parent) {
+          // Parent destroyed — clear orbit state, object reverts to physics
+          obj.orbitParentName = null;
+          continue;
+        }
 
-      const objPull = this.gravity.calculateDominantPull(ox, oy);
-      const objBody = obj.sprite.body as Phaser.Physics.Arcade.Body;
-      objBody.velocity.x += objPull.x * (delta / 1000) * GRAVITY_SCALE;
-      objBody.velocity.y += objPull.y * (delta / 1000) * GRAVITY_SCALE;
+        // Advance angle
+        obj.orbitAngle += obj.orbitAngularSpeed * (delta / 1000);
+        if (obj.orbitAngle > Math.PI * 2) obj.orbitAngle -= Math.PI * 2;
 
-      // Orbital velocity correction — nudges toward stable circular orbit
-      const dx = dominant.x - ox;
-      const dy = dominant.y - oy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 1) continue;
+        // Set position directly from parent + angle + radius
+        const newX = parent.gravityBody.x + Math.cos(obj.orbitAngle) * obj.orbitRadius;
+        const newY = parent.gravityBody.y + Math.sin(obj.orbitAngle) * obj.orbitRadius;
+        obj.sprite.setPosition(newX, newY);
 
-      const idealSpeed = Math.sqrt(
-        GRAVITY_CONSTANT * dominant.gravityMass * GRAVITY_SCALE / dist
-      ) * DEBRIS_ORBIT_SPEED_MULT;
-
-      const nx = dx / dist;
-      const ny = dy / dist;
-      const currentRelVx = objBody.velocity.x - (dominant.velocityX ?? 0);
-      const currentRelVy = objBody.velocity.y - (dominant.velocityY ?? 0);
-      const cross = currentRelVx * ny - currentRelVy * nx;
-      const sign = cross >= 0 ? 1 : -1;
-      const tangentX = -ny * sign;
-      const tangentY = nx * sign;
-
-      const idealVx = tangentX * idealSpeed + (dominant.velocityX ?? 0);
-      const idealVy = tangentY * idealSpeed + (dominant.velocityY ?? 0);
-
-      const correction = 0.15;
-      objBody.velocity.x += (idealVx - objBody.velocity.x) * correction;
-      objBody.velocity.y += (idealVy - objBody.velocity.y) * correction;
+        // Zero out physics velocity so it doesn't fight the position
+        (obj.sprite.body as Phaser.Physics.Arcade.Body).velocity.x = 0;
+        (obj.sprite.body as Phaser.Physics.Arcade.Body).velocity.y = 0;
+      } else {
+        // ── Physics mode — gravity only (no prescribed orbit) ──
+        const objPull = this.gravity.calculateDominantPull(obj.sprite.x, obj.sprite.y);
+        const objBody = obj.sprite.body as Phaser.Physics.Arcade.Body;
+        objBody.velocity.x += objPull.x * (delta / 1000) * GRAVITY_SCALE;
+        objBody.velocity.y += objPull.y * (delta / 1000) * GRAVITY_SCALE;
+      }
 
       // Keep damage overlay pinned to the moving sprite
       obj.syncOverlay();
@@ -601,10 +594,18 @@ export class GameScene extends Phaser.Scene {
         gravityMass: 0,
         color,
         name: isSatellite ? "Satellite" : undefined,
-        velocityX: bodyVx + localVx,
-        velocityY: bodyVy + localVy,
+        velocityX: 0,
+        velocityY: 0,
       });
       this.zones.addFixedObject(obj);
+      // Prescribe orbit around this planet
+      obj.orbitParentName = bodyName;
+      obj.orbitAngle = angle;
+      obj.orbitRadius = dist;
+      const baseAngularSpeed = Math.sqrt(
+        GRAVITY_CONSTANT * bodyMass * GRAVITY_SCALE / dist
+      ) / dist;
+      obj.orbitAngularSpeed = baseAngularSpeed * DEBRIS_ORBIT_SPEED_MULT;
     }
   }
 
@@ -641,10 +642,17 @@ export class GameScene extends Phaser.Scene {
         energyYield: 5 + Math.random() * 10,
         gravityMass: 0,
         color,
-        velocityX: Math.cos(tangentAngle) * orbitalSpeed * perturb,
-        velocityY: Math.sin(tangentAngle) * orbitalSpeed * perturb,
+        velocityX: 0,
+        velocityY: 0,
       });
       this.zones.addFixedObject(obj);
+      obj.orbitParentName = "Sun";
+      obj.orbitAngle = angle;
+      obj.orbitRadius = dist;
+      const baseAngularSpeed = Math.sqrt(
+        GRAVITY_CONSTANT * sunMass * GRAVITY_SCALE / dist
+      ) / dist;
+      obj.orbitAngularSpeed = baseAngularSpeed * DEBRIS_ORBIT_SPEED_MULT;
     }
   }
 
