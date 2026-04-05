@@ -5,7 +5,7 @@ import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
 import { GravitySystem } from "@/systems/GravitySystem";
 import { ZoneManager } from "@/systems/ZoneManager";
-import { getTierForMass, getTierName } from "@/data/tiers";
+import { getTierForMass, getTierName, TIERS } from "@/data/tiers";
 import { CombatSystem } from "@/systems/CombatSystem";
 import { HUD } from "@/ui/HUD";
 import { UpgradeScreen } from "@/ui/UpgradeScreen";
@@ -15,39 +15,17 @@ import { AudioManager } from "@/systems/AudioManager";
 import { InputManager } from "@/systems/InputManager";
 import { SettingsMenu, type CheatCallbacks } from "@/ui/SettingsMenu";
 import { SpaceObject } from "@/entities/SpaceObject";
+import { EarthDefense } from "@/systems/EarthDefense";
 
 import { BODY_DEFS } from "@/data/bodies";
 import { createOrbitStates, stepOrbit, type OrbitState } from "@/systems/OrbitSystem";
 import { renderBody, type RenderedBody } from "@/entities/BodyRenderer";
 import type { GravityBody } from "@/systems/GravitySystem";
 
-const TIER_MONOLOGUE: Record<number, string[]> = {
-  1: [
-    "I must grow.",
-    "I hunger.",
-    "So small... but not for long.",
-  ],
-  2: [
-    "More. I need more.",
-    "I can feel the pull of larger things.",
-    "This debris is beneath me now.",
-  ],
-  3: [
-    "The planets tremble.",
-    "I am becoming something... inevitable.",
-    "Their orbits are my feeding grounds.",
-  ],
-  4: [
-    "I will devour worlds.",
-    "Nothing can stop what I have become.",
-    "The planets are mine to consume.",
-  ],
-  5: [
-    "Even stars must fall.",
-    "I am the end of all things.",
-    "The Sun itself will feed my hunger.",
-  ],
-};
+/** Per-act monologue — single line per act, sourced from TIERS data. */
+function getActMonologue(tier: number): string | undefined {
+  return TIERS[tier - 1]?.monologue;
+}
 
 interface TrackedBody {
   name: string;
@@ -66,6 +44,7 @@ export class GameScene extends Phaser.Scene {
   upgradeScreen!: UpgradeScreen;
   minimap!: Minimap;
   private trajectoryPredictor!: TrajectoryPredictor;
+  private earthDefense!: EarthDefense;
   audio!: AudioManager;
   inputManager!: InputManager;
 
@@ -162,8 +141,10 @@ export class GameScene extends Phaser.Scene {
     this.audio = new AudioManager(this);
     this.combat.setAudio(this.audio);
 
+    this.earthDefense = new EarthDefense(this, this.zones, this.resources);
     this.hud = new HUD(this, this.resources, this.combat, this.inputManager, this.audio);
     this.minimap = new Minimap(this, this.gravity);
+    this.minimap.setVisible(false); // unlocked at Act II
     this.trajectoryPredictor = new TrajectoryPredictor(this, this.gravity);
 
     this.upgradeScreen = new UpgradeScreen(
@@ -210,6 +191,7 @@ export class GameScene extends Phaser.Scene {
       ...(this.gravity.getGraphics() ? [this.gravity.getGraphics()!] : []),
       ...(this.player.getParticleEmitter() ? [this.player.getParticleEmitter()!] : []),
       ...this.combat.getWorldGraphics(),
+      this.earthDefense.getGraphics(),
     ];
     uiCam.ignore(worldObjects);
     uiCam.ignore(this.zones.objectGroup);
@@ -423,6 +405,13 @@ export class GameScene extends Phaser.Scene {
     // Combat (auto-fire always on)
     this.combat.update(delta, 0);
 
+    // Earth defense satellites
+    const earthBody = this.trackedBodies.find(tb => tb.name === "Earth");
+    if (earthBody) {
+      this.earthDefense.setEarthPosition(earthBody.gravityBody.x, earthBody.gravityBody.y);
+    }
+    this.earthDefense.update(delta, this.player.x, this.player.y);
+
     // Check if any tracked bodies were destroyed
     for (let i = this.trackedBodies.length - 1; i >= 0; i--) {
       const tb = this.trackedBodies[i];
@@ -515,28 +504,30 @@ export class GameScene extends Phaser.Scene {
       this.isPaused = false;
       this.physics.world.resume();
       this.audio.music.onTierChange(this.currentTier);
-    });
+    }, this.currentTier);
   }
 
   private triggerEvolution(newTier: number): void {
     const currentZoom = this.cameras.main.zoom;
     this.cameras.main.zoomTo(currentZoom * 0.8, 1000, "Cubic.easeInOut");
 
+    // Roman numeral for the act banner
+    const romanNumerals = ["I", "II", "III", "IV", "V"];
+    const roman = romanNumerals[newTier - 1] ?? String(newTier);
     const text = this.add
       .text(
         this.scale.width / 2,
         this.scale.height / 2 - 50,
-        `TIER ${newTier}: ${getTierName(newTier).toUpperCase()}`,
+        `ACT ${roman}: ${getTierName(newTier).toUpperCase()}`,
         { fontFamily: "monospace", fontSize: "32px", color: "#6c63ff", stroke: "#000", strokeThickness: 4 }
       )
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(300);
 
-    // Menacing monologue
-    const messages = TIER_MONOLOGUE[newTier];
-    if (messages) {
-      const msg = messages[Math.floor(Math.random() * messages.length)];
+    // Per-act monologue
+    const msg = getActMonologue(newTier);
+    if (msg) {
       const monologue = this.add
         .text(this.scale.width / 2, this.scale.height / 2 + 30, `"${msg}"`, {
           fontFamily: "monospace",
@@ -597,6 +588,18 @@ export class GameScene extends Phaser.Scene {
     // Camera shake for dramatic effect
     this.cameras.main.shake(500, 0.01 * newTier);
 
+    if (newTier >= 2) {
+      this.minimap.setVisible(true);
+    }
+    if (newTier >= 3) {
+      const earth = this.trackedBodies.find(tb => tb.name === "Earth");
+      if (earth) {
+        this.earthDefense.activate(
+          earth.gravityBody.x, earth.gravityBody.y,
+          earth.gravityBody.killRadius ?? 0, earth.gravityBody.gravityMass
+        );
+      }
+    }
     if (newTier >= 4) {
       this.hud.showKillTracker();
     }
@@ -808,7 +811,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(801);
     objects.push(title);
 
-    // "I hunger." — fades in with delay, pulses gently
+    // "Systems damaged. Repair protocol initiated." — fades in with delay, pulses gently
     const hunger = this.add
       .text(width / 2, height * 0.12 + 70, "", {
         fontFamily: "monospace",
@@ -822,8 +825,8 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0);
     objects.push(hunger);
 
-    // Typewriter effect for "I hunger."
-    const hungerText = '"I hunger."';
+    // Typewriter effect
+    const hungerText = '"Systems damaged. Repair protocol initiated."';
     let charIdx = 0;
     this.time.addEvent({
       delay: 80,
@@ -864,11 +867,11 @@ export class GameScene extends Phaser.Scene {
     );
 
     const instructions = [
-      "You are a tiny station orbiting Earth.",
-      "Destroy debris to collect mass and grow.",
-      "Each tier makes you exponentially stronger.",
-      "Escape orbit and devour every planet.",
-      "Destroy the Sun to win.",
+      "You are a damaged repair bot in Earth orbit.",
+      "Consume orbital debris to repair your systems.",
+      "Grow stronger. Upgrade your capabilities.",
+      "But the hunger doesn't stop...",
+      "Devour everything. Even the Sun.",
     ];
 
     for (let i = 0; i < instructions.length; i++) {

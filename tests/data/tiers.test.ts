@@ -25,7 +25,13 @@ describe("tiers", () => {
   });
 
   it("getTierName returns correct name", () => {
-    expect(getTierName(1)).toBe("Satellite");
-    expect(getTierName(5)).toBe("Star Killer");
+    expect(getTierName(1)).toBe("I Must Grow");
+    expect(getTierName(5)).toBe("Annihilation");
+  });
+
+  it("every tier has a monologue", () => {
+    for (const t of TIERS) {
+      expect(t.monologue).toBeTruthy();
+    }
   });
 });

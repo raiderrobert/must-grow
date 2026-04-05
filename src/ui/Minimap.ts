@@ -39,6 +39,7 @@ export class Minimap {
   private graphics: Phaser.GameObjects.Graphics;
   private ghosts: Ghost[] = [];
   private currentViewRange: number = 10_000;
+  private visible: boolean = true;
 
   private bodyInfoMap: Map<GravityBody, BodyInfo> = new Map();
 
@@ -104,8 +105,15 @@ export class Minimap {
     return label;
   }
 
+  setVisible(visible: boolean): void {
+    this.visible = visible;
+    this.graphics.setVisible(visible);
+    for (const label of this.labelPool) label.setVisible(visible);
+  }
+
   update(playerX: number, playerY: number, delta: number): void {
     this.graphics.clear();
+    if (!this.visible) return;
 
     // Reset label pool
     this.labelIndex = 0;

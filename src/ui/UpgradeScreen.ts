@@ -53,11 +53,11 @@ export class UpgradeScreen {
     this.mainCam = cam;
   }
 
-  show(onClose: () => void): void {
+  show(onClose: () => void, currentAct: number = 5): void {
     if (this.isVisible) return;
     this.isVisible = true;
     this.onClose = onClose;
-    this.build(drawCards(3));
+    this.build(drawCards(3, currentAct));
   }
 
   private build(cards: UpgradeCard[]): void {

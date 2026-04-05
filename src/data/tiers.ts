@@ -2,14 +2,16 @@ export interface TierDefinition {
   tier: number;
   name: string;
   massThreshold: number;
+  monologue: string;
   unlocks: string[]; // upgrade IDs unlocked at this tier
 }
 
 export const TIERS: TierDefinition[] = [
   {
     tier: 1,
-    name: "Satellite",
+    name: "I Must Grow",
     massThreshold: 0,
+    monologue: "Systems damaged. I must repair. I must... grow.",
     unlocks: [
       "clampRange",
       "chewSpeed",
@@ -22,8 +24,9 @@ export const TIERS: TierDefinition[] = [
   },
   {
     tier: 2,
-    name: "Space Station",
+    name: "Awareness",
     massThreshold: 100,
+    monologue: "I can see further now. There is so much more to consume.",
     unlocks: [
       "beamPower",
       "fireRate",
@@ -37,20 +40,23 @@ export const TIERS: TierDefinition[] = [
   },
   {
     tier: 3,
-    name: "Mega Station",
+    name: "Hunted",
     massThreshold: 500,
+    monologue: "They've noticed me. They send weapons. It doesn't matter. I must grow.",
     unlocks: ["tractorBeam", "droneSwarm", "fusionReactor", "powerCore"],
   },
   {
     tier: 4,
-    name: "Planet Eater",
+    name: "Ascension",
     massThreshold: 2000,
+    monologue: "I am beyond their reach now. The planets themselves will feed me.",
     unlocks: ["gravityWell", "stellarHarvester", "darkEnergyMatrix"],
   },
   {
     tier: 5,
-    name: "Star Killer",
+    name: "Annihilation",
     massThreshold: 10000,
+    monologue: "Even stars must fall. I must grow.",
     unlocks: ["superWeapon"],
   },
 ];

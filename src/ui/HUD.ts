@@ -291,7 +291,7 @@ export class HUD {
       (this.resources.totalMassEarned - currentThreshold) / Math.max(1, nextThreshold - currentThreshold)
     );
     this.tierProgressFill.width = 118 * tierProgress; // 120 - 2px border
-    this.tierText.setText(`Tier ${tier}: ${getTierName(tier)}  → ${nextThreshold}`);
+    this.tierText.setText(`Act ${tier}: ${getTierName(tier)}  → ${nextThreshold}`);
 
     // Weapon slot: burst cooldown
     if (this.combat) {
