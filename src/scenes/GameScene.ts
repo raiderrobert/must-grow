@@ -778,12 +778,16 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = true;
     this.physics.world.pause();
 
+    // Hide HUD and player so they don't bleed through the overlay
+    this.hud.setVisible(false);
+    this.player.body.setAlpha(0);
+
     const { width, height } = this.scale;
     const objects: Phaser.GameObjects.GameObject[] = [];
 
     objects.push(
       this.add
-        .rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+        .rectangle(width / 2, height / 2, width, height, 0x000000, 1.0)
         .setScrollFactor(0)
         .setDepth(800)
     );
@@ -840,10 +844,25 @@ export class GameScene extends Phaser.Scene {
       ease: "Sine.easeInOut",
     });
 
+    // Controls hint
+    objects.push(
+      this.add
+        .text(width / 2, height * 0.6 + 56, "WASD move  ·  SPACE burst  ·  SHIFT boost  |  or use gamepad", {
+          fontFamily: "monospace",
+          fontSize: "11px",
+          color: "#555",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(801)
+    );
+
     this.cameras.main.ignore(objects);
 
     const dismiss = () => {
       for (const obj of objects) obj.destroy();
+      this.hud.setVisible(true);
+      this.player.body.setAlpha(1);
       this.isPaused = false;
       this.physics.world.resume();
       this.audio.music.play("ambient");

@@ -62,8 +62,8 @@ export const DEBRIS_ORBIT_SPEED_MULT = 25; // debris orbits planets 25x faster t
 
 // Orbital physics
 export const ORBIT_SPEED_SCALE = 1.0; // global multiplier for planet orbit speeds
-export const TRAJECTORY_STEPS = 30; // number of prediction dots
-export const TRAJECTORY_DURATION = 3; // seconds of prediction
+export const TRAJECTORY_STEPS = 15; // number of prediction dots
+export const TRAJECTORY_DURATION = 1.5; // seconds of prediction
 
 // Debug
 export const DEBUG_KILL_ZONES = false; // draws thin red ring at kill zone boundaries

@@ -120,6 +120,13 @@ export class HUD {
     return this.destroyedBodies.size >= this.killTrackerTexts.length;
   }
 
+  /** Show or hide all HUD objects (used during start screen). */
+  setVisible(visible: boolean): void {
+    for (const obj of this.objects) {
+      (obj as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(visible);
+    }
+  }
+
   /** Tell a camera to ignore all HUD objects (so they're only rendered by the UI camera). */
   ignoreWithCamera(camera: Phaser.Cameras.Scene2D.Camera): void {
     camera.ignore(this.objects.filter(Boolean));
@@ -244,7 +251,7 @@ export class HUD {
     this.weaponSlotHint = this.scene.add
       .text(x + slotW / 2, y + 24, "", {
         fontFamily: "monospace",
-        fontSize: "9px",
+        fontSize: "12px",
         color: "#888",
       })
       .setOrigin(0.5, 0)
@@ -269,8 +276,10 @@ export class HUD {
       `${Math.floor(this.resources.energy)}/${this.resources.batteryCapacity}`
     );
 
+    const mass = Math.floor(this.resources.mass);
+    const earned = Math.floor(this.resources.totalMassEarned);
     this.massText.setText(
-      `Mass: ${Math.floor(this.resources.mass)} (total: ${Math.floor(this.resources.totalMassEarned)})`
+      earned > mass ? `Mass: ${mass}  (earned: ${earned})` : `Mass: ${mass}`
     );
 
     const tier = getTierForMass(this.resources.totalMassEarned);
@@ -282,9 +291,7 @@ export class HUD {
       (this.resources.totalMassEarned - currentThreshold) / Math.max(1, nextThreshold - currentThreshold)
     );
     this.tierProgressFill.width = 118 * tierProgress; // 120 - 2px border
-    this.tierText.setText(
-      `Tier ${tier}: ${getTierName(tier)}  (${Math.floor(this.resources.totalMassEarned)}/${nextThreshold})`
-    );
+    this.tierText.setText(`Tier ${tier}: ${getTierName(tier)}  → ${nextThreshold}`);
 
     // Weapon slot: burst cooldown
     if (this.combat) {
