@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, GRAVITY_SCALE, GRAVITY_CONSTANT, ZOOM_START, ZOOM_MIN, ORBIT_SPEED_SCALE, DEBRIS_ORBIT_SPEED_MULT } from "@/constants";
+import { COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, PLAYER_THRUST_POWER, GRAVITY_SCALE, GRAVITY_CONSTANT, ZOOM_START, ZOOM_MIN, ORBIT_SPEED_SCALE, DEBRIS_ORBIT_SPEED_MULT } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
 import { PlayerStation } from "@/entities/PlayerStation";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -203,6 +203,13 @@ export class GameScene extends Phaser.Scene {
 
     this.settingsMenu = new SettingsMenu(this, {
       setTier: (tier: number) => {
+        // Give enough mass so the natural tier check doesn't override
+        const thresholds = [0, 0, 100, 500, 2000, 10000];
+        const requiredMass = thresholds[tier] ?? 10000;
+        if (this.resources.totalMassEarned < requiredMass) {
+          this.resources.totalMassEarned = requiredMass;
+          this.resources.mass = requiredMass;
+        }
         this.currentTier = tier;
         this.player.tier = tier;
         this.triggerEvolution(tier);
@@ -490,7 +497,7 @@ export class GameScene extends Phaser.Scene {
 
   private triggerEvolution(newTier: number): void {
     const currentZoom = this.cameras.main.zoom;
-    this.cameras.main.zoomTo(currentZoom * 0.7, 1000, "Cubic.easeInOut");
+    this.cameras.main.zoomTo(currentZoom * 0.8, 1000, "Cubic.easeInOut");
 
     const text = this.add
       .text(
@@ -523,6 +530,11 @@ export class GameScene extends Phaser.Scene {
 
     // Debris pickup range scales with size
     this.combat.debrisPickupRange = 80 * (1 + (newTier - 1) * 2);
+
+    // Thrust scales with tier so the player stays maneuverable
+    const thrustMultipliers = [1, 2, 5, 15, 40]; // T1 through T5
+    const thrustIdx = Math.min(newTier - 1, thrustMultipliers.length - 1);
+    this.player.speed = PLAYER_THRUST_POWER * thrustMultipliers[thrustIdx];
 
     // Camera shake for dramatic effect
     this.cameras.main.shake(500, 0.01 * newTier);
