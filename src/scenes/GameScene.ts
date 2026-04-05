@@ -612,7 +612,7 @@ export class GameScene extends Phaser.Scene {
       const baseAngularSpeed = Math.sqrt(
         GRAVITY_CONSTANT * bodyMass * GRAVITY_SCALE / dist
       ) / dist;
-      obj.orbitAngularSpeed = baseAngularSpeed * DEBRIS_ORBIT_SPEED_MULT;
+      obj.orbitAngularSpeed = -baseAngularSpeed * DEBRIS_ORBIT_SPEED_MULT;
     }
   }
 
@@ -659,7 +659,7 @@ export class GameScene extends Phaser.Scene {
       const baseAngularSpeed = Math.sqrt(
         GRAVITY_CONSTANT * sunMass * GRAVITY_SCALE / dist
       ) / dist;
-      obj.orbitAngularSpeed = baseAngularSpeed * DEBRIS_ORBIT_SPEED_MULT;
+      obj.orbitAngularSpeed = -baseAngularSpeed * DEBRIS_ORBIT_SPEED_MULT;
     }
   }
 
@@ -689,7 +689,7 @@ export class GameScene extends Phaser.Scene {
 
     // Add Earth's own velocity so the player moves with Earth
     const { vx: earthVx, vy: earthVy } = this.getEarthVelocity();
-    this.player.body.setVelocity(earthVx + playerOrbitSpeed, earthVy);
+    this.player.body.setVelocity(earthVx - playerOrbitSpeed, earthVy);
   }
 
   private handleDeath(): void {
