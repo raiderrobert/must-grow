@@ -921,7 +921,7 @@ export class GameScene extends Phaser.Scene {
 
     // ── Start prompt — pulses ──
     const prompt = this.add
-      .text(width / 2, height * 0.86, "[ PRESS ANY KEY OR BUTTON TO BEGIN ]", {
+      .text(width / 2, height * 0.86, "[ PRESS SPACE OR ANY BUTTON TO BEGIN ]", {
         fontFamily: "monospace",
         fontSize: "18px",
         color: "#4ecdc4",
@@ -955,10 +955,13 @@ export class GameScene extends Phaser.Scene {
       this.audio.music.play("ambient");
     };
 
+    // Space or Enter only (not Shift — interferes with screenshots)
+    const spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    const enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    spaceKey.once("down", dismiss);
+    enterKey.once("down", dismiss);
     // Click/touch
     this.input.once("pointerdown", dismiss);
-    // Any keyboard key
-    this.input.keyboard!.once("keydown", dismiss);
     // Gamepad any button
     if (this.input.gamepad) {
       this.input.gamepad.once("down", dismiss);
