@@ -514,7 +514,8 @@ export class GameScene extends Phaser.Scene {
     // Each tier is 10x more powerful than the last
     const tierMultiplier = Math.pow(3, newTier - 1); // T1=1, T2=3, T3=9, T4=27, T5=81
 
-    this.combat.beamRange = 300 * tierMultiplier;
+    const rangeMultiplier = Math.pow(4, newTier - 1); // T1=1, T2=4, T3=16, T4=64, T5=256
+    this.combat.beamRange = 300 * rangeMultiplier;
     this.combat.beamDamage = 10 * tierMultiplier;
     this.combat.autoFireCooldown = Math.max(100, 900 / (1 + (newTier - 1) * 0.5)); // gets faster but capped
 
@@ -523,6 +524,12 @@ export class GameScene extends Phaser.Scene {
 
     // Debris pickup range scales with size
     this.combat.debrisPickupRange = 80 * (1 + (newTier - 1) * 2);
+
+    // Energy scales with tier — sustain longer fights at higher tiers
+    const energyMultiplier = Math.pow(3, newTier - 1); // same curve as weapons
+    this.resources.batteryCapacity = 100 * energyMultiplier;
+    this.resources.energy = this.resources.batteryCapacity; // full refill on tier up
+    this.resources.passiveRechargeRate = 8 * energyMultiplier;
 
     // Thrust scales with tier so the player stays maneuverable
     const thrustMultipliers = [1, 2, 5, 15, 40]; // T1 through T5
