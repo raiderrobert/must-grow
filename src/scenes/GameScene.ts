@@ -21,6 +21,34 @@ import { createOrbitStates, stepOrbit, type OrbitState } from "@/systems/OrbitSy
 import { renderBody, type RenderedBody } from "@/entities/BodyRenderer";
 import type { GravityBody } from "@/systems/GravitySystem";
 
+const TIER_MONOLOGUE: Record<number, string[]> = {
+  1: [
+    "I must grow.",
+    "I hunger.",
+    "So small... but not for long.",
+  ],
+  2: [
+    "More. I need more.",
+    "I can feel the pull of larger things.",
+    "This debris is beneath me now.",
+  ],
+  3: [
+    "The planets tremble.",
+    "I am becoming something... inevitable.",
+    "Their orbits are my feeding grounds.",
+  ],
+  4: [
+    "I will devour worlds.",
+    "Nothing can stop what I have become.",
+    "The planets are mine to consume.",
+  ],
+  5: [
+    "Even stars must fall.",
+    "I am the end of all things.",
+    "The Sun itself will feed my hunger.",
+  ],
+};
+
 interface TrackedBody {
   name: string;
   spaceObj: SpaceObject;
@@ -142,7 +170,7 @@ export class GameScene extends Phaser.Scene {
       this, this.combat, this.resources, this.player, this.audio, this.inputManager
     );
 
-    this.input.once("pointerdown", () => this.audio.music.play("ambient"));
+    // Music starts when the player dismisses the start screen
 
     // Collisions
     this.physics.add.overlap(
@@ -277,6 +305,8 @@ export class GameScene extends Phaser.Scene {
 
     // Starting zoom: keeps player ~6px on screen, Earth arc visible at bottom
     this.cameras.main.setZoom(ZOOM_START);
+
+    this.showStartScreen();
   }
 
   update(_time: number, delta: number): void {
@@ -503,6 +533,34 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(300);
 
+    // Menacing monologue
+    const messages = TIER_MONOLOGUE[newTier];
+    if (messages) {
+      const msg = messages[Math.floor(Math.random() * messages.length)];
+      const monologue = this.add
+        .text(this.scale.width / 2, this.scale.height / 2 + 30, `"${msg}"`, {
+          fontFamily: "monospace",
+          fontSize: "18px",
+          color: "#ff6b6b",
+          fontStyle: "italic",
+          stroke: "#000",
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(301);
+
+      this.tweens.add({
+        targets: monologue,
+        alpha: 0,
+        y: monologue.y - 20,
+        duration: 4000,
+        delay: 1000,
+        ease: "Power2",
+        onComplete: () => monologue.destroy(),
+      });
+    }
+
     this.audio.play("sfx_tier_up");
     this.tweens.add({
       targets: text, alpha: 0, y: text.y - 40, duration: 3000, ease: "Power2",
@@ -716,6 +774,88 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private showStartScreen(): void {
+    this.isPaused = true;
+    this.physics.world.pause();
+
+    const { width, height } = this.scale;
+    const objects: Phaser.GameObjects.GameObject[] = [];
+
+    objects.push(
+      this.add
+        .rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+        .setScrollFactor(0)
+        .setDepth(800)
+    );
+
+    objects.push(
+      this.add
+        .text(width / 2, height * 0.2, "I must grow.", {
+          fontFamily: "monospace",
+          fontSize: "52px",
+          color: "#ffd93d",
+          stroke: "#000",
+          strokeThickness: 6,
+          fontStyle: "italic",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(801)
+    );
+
+    // Opening monologue
+    objects.push(
+      this.add
+        .text(width / 2, height * 0.2 + 60, '"I hunger."', {
+          fontFamily: "monospace",
+          fontSize: "16px",
+          color: "#ff6b6b",
+          fontStyle: "italic",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(801)
+    );
+
+    const prompt = this.add
+      .text(width / 2, height * 0.6, "[ CLICK TO BEGIN ]", {
+        fontFamily: "monospace",
+        fontSize: "20px",
+        color: "#4ecdc4",
+        backgroundColor: "#1a1a2e",
+        padding: { x: 20, y: 10 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(801)
+      .setInteractive({ useHandCursor: true });
+    objects.push(prompt);
+
+    this.tweens.add({
+      targets: prompt,
+      alpha: 0.3,
+      yoyo: true,
+      repeat: -1,
+      duration: 800,
+      ease: "Sine.easeInOut",
+    });
+
+    this.cameras.main.ignore(objects);
+
+    const dismiss = () => {
+      for (const obj of objects) obj.destroy();
+      this.isPaused = false;
+      this.physics.world.resume();
+      this.audio.music.play("ambient");
+    };
+
+    this.input.once("pointerdown", dismiss);
+    const enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    enterKey.once("down", dismiss);
+    const spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    spaceKey.once("down", dismiss);
+  }
+
   private showWinScreen(): void {
     // Dismiss upgrade screen if open
     if (this.upgradeScreen) {
@@ -804,6 +944,18 @@ export class GameScene extends Phaser.Scene {
         duration: 600,
         delay: 600,
       });
+
+      // Final monologue
+      this.add
+        .text(width / 2, height * 0.3 + 120, '"There is nothing left... or is there?"', {
+          fontFamily: "monospace",
+          fontSize: "14px",
+          color: "#ff6b6b",
+          fontStyle: "italic",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(601);
 
       // Time
       this.add
