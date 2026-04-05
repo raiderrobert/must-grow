@@ -4,3 +4,4 @@ dist/
 scripts/music/.venv/
 scripts/music/.python-version
 *.pyc
+.worktrees/
