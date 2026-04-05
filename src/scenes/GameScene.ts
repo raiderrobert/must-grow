@@ -785,54 +785,150 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const objects: Phaser.GameObjects.GameObject[] = [];
 
+    // Semi-transparent overlay — starfield visible behind
     objects.push(
       this.add
-        .rectangle(width / 2, height / 2, width, height, 0x000000, 1.0)
+        .rectangle(width / 2, height / 2, width, height, 0x000000, 0.85)
         .setScrollFactor(0)
         .setDepth(800)
     );
 
-    objects.push(
-      this.add
-        .text(width / 2, height * 0.2, "I must grow.", {
-          fontFamily: "monospace",
-          fontSize: "52px",
-          color: "#ffd93d",
-          stroke: "#000",
-          strokeThickness: 6,
-          fontStyle: "italic",
-        })
-        .setOrigin(0.5)
-        .setScrollFactor(0)
-        .setDepth(801)
-    );
-
-    // Opening monologue
-    objects.push(
-      this.add
-        .text(width / 2, height * 0.2 + 60, '"I hunger."', {
-          fontFamily: "monospace",
-          fontSize: "16px",
-          color: "#ff6b6b",
-          fontStyle: "italic",
-        })
-        .setOrigin(0.5)
-        .setScrollFactor(0)
-        .setDepth(801)
-    );
-
-    const prompt = this.add
-      .text(width / 2, height * 0.6, "[ CLICK TO BEGIN ]", {
+    // Title
+    const title = this.add
+      .text(width / 2, height * 0.12, "I must grow.", {
         fontFamily: "monospace",
-        fontSize: "20px",
-        color: "#4ecdc4",
-        backgroundColor: "#1a1a2e",
-        padding: { x: 20, y: 10 },
+        fontSize: "56px",
+        color: "#ffd93d",
+        stroke: "#000",
+        strokeThickness: 6,
+        fontStyle: "italic",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(801);
+    objects.push(title);
+
+    // "I hunger." — fades in with delay, pulses gently
+    const hunger = this.add
+      .text(width / 2, height * 0.12 + 70, "", {
+        fontFamily: "monospace",
+        fontSize: "18px",
+        color: "#ff6b6b",
+        fontStyle: "italic",
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(801)
-      .setInteractive({ useHandCursor: true });
+      .setAlpha(0);
+    objects.push(hunger);
+
+    // Typewriter effect for "I hunger."
+    const hungerText = '"I hunger."';
+    let charIdx = 0;
+    this.time.addEvent({
+      delay: 80,
+      repeat: hungerText.length - 1,
+      startAt: 800, // wait 800ms before starting
+      callback: () => {
+        charIdx++;
+        hunger.setText(hungerText.substring(0, charIdx));
+        hunger.setAlpha(1);
+      },
+    });
+
+    // Gentle pulse after typewriter finishes
+    this.time.delayedCall(800 + hungerText.length * 80 + 200, () => {
+      if (hunger.active) {
+        this.tweens.add({
+          targets: hunger,
+          alpha: 0.5,
+          yoyo: true,
+          repeat: -1,
+          duration: 2000,
+          ease: "Sine.easeInOut",
+        });
+      }
+    });
+
+    // ── How to play ──
+    objects.push(
+      this.add
+        .text(width / 2, height * 0.32, "HOW TO PLAY", {
+          fontFamily: "monospace",
+          fontSize: "18px",
+          color: "#6c63ff",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(801)
+    );
+
+    const instructions = [
+      "You are a tiny station orbiting Earth.",
+      "Destroy debris to collect mass and grow.",
+      "Each tier makes you exponentially stronger.",
+      "Escape orbit and devour every planet.",
+      "Destroy the Sun to win.",
+    ];
+
+    for (let i = 0; i < instructions.length; i++) {
+      objects.push(
+        this.add
+          .text(width / 2, height * 0.32 + 32 + i * 24, instructions[i], {
+            fontFamily: "monospace",
+            fontSize: "15px",
+            color: "#aaa",
+          })
+          .setOrigin(0.5)
+          .setScrollFactor(0)
+          .setDepth(801)
+      );
+    }
+
+    // ── Controls ──
+    objects.push(
+      this.add
+        .text(width / 2, height * 0.62, "CONTROLS", {
+          fontFamily: "monospace",
+          fontSize: "18px",
+          color: "#6c63ff",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(801)
+    );
+
+    const controls = [
+      "WASD / Left Stick ····· Move",
+      "SPACE / A ············· Burst Fire",
+      "SHIFT / RT ············ Boost",
+      "ESC / Start ··········· Settings",
+    ];
+
+    for (let i = 0; i < controls.length; i++) {
+      objects.push(
+        this.add
+          .text(width / 2, height * 0.62 + 28 + i * 22, controls[i], {
+            fontFamily: "monospace",
+            fontSize: "14px",
+            color: "#888",
+          })
+          .setOrigin(0.5)
+          .setScrollFactor(0)
+          .setDepth(801)
+      );
+    }
+
+    // ── Start prompt — pulses ──
+    const prompt = this.add
+      .text(width / 2, height * 0.86, "[ PRESS ANY KEY OR BUTTON TO BEGIN ]", {
+        fontFamily: "monospace",
+        fontSize: "18px",
+        color: "#4ecdc4",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(801);
     objects.push(prompt);
 
     this.tweens.add({
@@ -844,22 +940,13 @@ export class GameScene extends Phaser.Scene {
       ease: "Sine.easeInOut",
     });
 
-    // Controls hint
-    objects.push(
-      this.add
-        .text(width / 2, height * 0.6 + 56, "WASD move  ·  SPACE burst  ·  SHIFT boost  |  or use gamepad", {
-          fontFamily: "monospace",
-          fontSize: "11px",
-          color: "#555",
-        })
-        .setOrigin(0.5)
-        .setScrollFactor(0)
-        .setDepth(801)
-    );
-
     this.cameras.main.ignore(objects);
 
+    // Dismiss on ANY input
+    let dismissed = false;
     const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
       for (const obj of objects) obj.destroy();
       this.hud.setVisible(true);
       this.player.body.setAlpha(1);
@@ -868,11 +955,14 @@ export class GameScene extends Phaser.Scene {
       this.audio.music.play("ambient");
     };
 
+    // Click/touch
     this.input.once("pointerdown", dismiss);
-    const enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    enterKey.once("down", dismiss);
-    const spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    spaceKey.once("down", dismiss);
+    // Any keyboard key
+    this.input.keyboard!.once("keydown", dismiss);
+    // Gamepad any button
+    if (this.input.gamepad) {
+      this.input.gamepad.once("down", dismiss);
+    }
   }
 
   private showWinScreen(): void {
