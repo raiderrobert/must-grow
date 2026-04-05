@@ -67,7 +67,7 @@ export function createOrbitStates(
       bodyName: b.name,
       parentName: b.orbitParent!,
       distance: b.distance,
-      orbitSpeed: computeOrbitSpeed(b.distance),
+      orbitSpeed: -computeOrbitSpeed(b.distance), // negative = counter-clockwise in Phaser y-down
       currentAngle: b.angle,
     }));
 }
