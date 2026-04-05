@@ -275,17 +275,20 @@ export class CombatSystem {
   }
 
   private updateDebrisAttraction(): void {
+    // Pickup range scales with player size — always collect things you fly over
+    const effectiveRange = this.debrisPickupRange + this.player.size;
+
     for (const d of this.debrisList) {
       if (!d.sprite.active) continue;
       const dist = Phaser.Math.Distance.Between(
         this.player.x, this.player.y, d.sprite.x, d.sprite.y
       );
-      if (dist < this.debrisPickupRange) {
+      if (dist < effectiveRange) {
         const angle = Phaser.Math.Angle.Between(
           d.sprite.x, d.sprite.y, this.player.x, this.player.y
         );
-        // Fast vacuum pull — snaps debris in within 1-2 frames
-        const pullSpeed = 600 + (1 - dist / this.debrisPickupRange) * 1200;
+        const sizeBoost = Math.max(1, this.player.size / 50); // 1x at size 50, 48x at size 2400
+        const pullSpeed = (600 + (1 - dist / effectiveRange) * 1200) * sizeBoost;
         d.sprite.body!.velocity.x = Math.cos(angle) * pullSpeed;
         d.sprite.body!.velocity.y = Math.sin(angle) * pullSpeed;
       }
