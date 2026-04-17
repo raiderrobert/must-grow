@@ -14,6 +14,7 @@ import { TrajectoryPredictor } from "@/ui/TrajectoryPredictor";
 import { AudioManager } from "@/systems/AudioManager";
 import { InputManager } from "@/systems/InputManager";
 import { SettingsMenu, type CheatCallbacks } from "@/ui/SettingsMenu";
+import { createQRCode } from "@/ui/QRCode";
 import { SpaceObject } from "@/entities/SpaceObject";
 import { EarthDefense } from "@/systems/EarthDefense";
 
@@ -987,6 +988,7 @@ export class GameScene extends Phaser.Scene {
       if (dismissed) return;
       dismissed = true;
       for (const obj of objects) obj.destroy();
+      for (const obj of qrObjects) obj.destroy();
       this.hud.setVisible(true);
       this.player.body.setAlpha(1);
       this.isPaused = false;
@@ -1005,6 +1007,9 @@ export class GameScene extends Phaser.Scene {
     if (this.input.gamepad) {
       this.input.gamepad.once("down", dismiss);
     }
+
+    // QR code for sharing the game URL
+    const qrObjects = createQRCode(this);
   }
 
   private showWinScreen(): void {
