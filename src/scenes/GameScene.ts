@@ -615,9 +615,7 @@ export class GameScene extends Phaser.Scene {
         );
       }
     }
-    if (newTier >= 4) {
-      this.hud.showKillTracker();
-    }
+
   }
 
   private getBodyVelocity(bodyName: string): { vx: number; vy: number } {
@@ -786,6 +784,7 @@ export class GameScene extends Phaser.Scene {
     const shakeIntensity = Math.min(0.02, 0.005 + tracked.spaceObj.config.size / 100_000);
     this.cameras.main.shake(1000, shakeIntensity);
 
+    this.hud.showKillTracker();
     const allDestroyed = this.hud.markBodyDestroyed(tracked.name);
     if (allDestroyed) {
       this.showWinScreen();

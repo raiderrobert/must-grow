@@ -1,9 +1,17 @@
 import Phaser from "phaser";
 import { COLORS } from "@/constants";
 import { ResourceManager } from "@/systems/ResourceManager";
-import { getTierForMass, getTierName } from "@/data/tiers";
+import { TIERS, getTierForMass, getTierName } from "@/data/tiers";
+
 import type { CombatSystem } from "@/systems/CombatSystem";
 import type { InputManager } from "@/systems/InputManager";
+
+/** Abbreviate large numbers: 12345 -> 12.3k, 1234567 -> 1.2M */
+function formatNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000)    return `${(n / 1_000).toFixed(1)}k`;
+  return `${Math.floor(n)}`;
+}
 
 export class HUD {
   private scene: Phaser.Scene;
@@ -77,7 +85,6 @@ export class HUD {
         .setVisible(false)
         .setData("bodyName", bodyNames[i]);
       this.killTrackerTexts.push(text);
-      this.objects.push(text);
     }
   }
 
@@ -125,20 +132,20 @@ export class HUD {
     const slotW = 100;
     const x = width - slotW - 12;
     const y = 12;
-    this.weaponSlotBg.setPosition(x + slotW / 2, y + 36 / 2);
-    this.weaponSlotFill.setPosition(x + 2, y + 36 - 6);
+    this.weaponSlotBg.setPosition(x + slotW / 2, y + 48 / 2);
+    this.weaponSlotFill.setPosition(x + 2, y + 48 - 6);
     this.weaponSlotLabel.setPosition(x + slotW / 2, y + 10);
-    this.weaponSlotHint.setPosition(x + slotW / 2, y + 24);
+    this.weaponSlotHint.setPosition(x + slotW / 2, y + 26);
   }
 
   /** Tell a camera to ignore all HUD objects (so they're only rendered by the UI camera). */
   ignoreWithCamera(camera: Phaser.Cameras.Scene2D.Camera): void {
-    camera.ignore(this.objects.filter(Boolean));
+    camera.ignore([...this.objects, ...this.killTrackerTexts].filter(Boolean));
   }
 
   /** All HUD GameObjects — for external camera setup. */
   getObjects(): Phaser.GameObjects.GameObject[] {
-    return this.objects;
+    return [...this.objects, ...this.killTrackerTexts];
   }
 
   private createEnergyBar(): void {
@@ -219,7 +226,7 @@ export class HUD {
 
   private createWeaponSlot(): void {
     const slotW = 100;
-    const slotH = 36;
+    const slotH = 48;
     const x = this.scene.scale.width - slotW - 12;
     const y = 12;
 
@@ -253,7 +260,7 @@ export class HUD {
 
     // Button hint (below name)
     this.weaponSlotHint = this.scene.add
-      .text(x + slotW / 2, y + 24, "", {
+      .text(x + slotW / 2, y + 26, "", {
         fontFamily: "monospace",
         fontSize: "12px",
         color: "#888",
@@ -277,25 +284,36 @@ export class HUD {
     }
 
     this.energyText.setText(
-      `${Math.floor(this.resources.energy)}/${this.resources.batteryCapacity}`
+      `${formatNum(this.resources.energy)}/${formatNum(this.resources.batteryCapacity)}`
     );
 
-    const mass = Math.floor(this.resources.mass);
-    const earned = Math.floor(this.resources.totalMassEarned);
+    const mass = this.resources.mass;
+    const earned = this.resources.totalMassEarned;
     this.massText.setText(
-      earned > mass ? `Mass: ${mass}  (earned: ${earned})` : `Mass: ${mass}`
+      earned > mass
+        ? `Mass: ${formatNum(mass)}  (earned: ${formatNum(earned)})`
+        : `Mass: ${formatNum(mass)}`
     );
 
     const tier = getTierForMass(this.resources.totalMassEarned);
 
-    // Tier progress bar
-    const currentThreshold = tier <= 1 ? 0 : ([0, 0, 100, 500, 2000, 10000][tier] ?? 0);
-    const nextThreshold = [0, 100, 500, 2000, 10000, 50000][tier] ?? 50000;
-    const tierProgress = Math.min(1,
-      (this.resources.totalMassEarned - currentThreshold) / Math.max(1, nextThreshold - currentThreshold)
+    // Tier progress bar — derive thresholds from TIERS data, not magic arrays
+    const tierDef     = TIERS[tier - 1];
+    const nextTierDef = TIERS[tier];          // undefined at max tier
+    const currentThreshold = tierDef?.massThreshold ?? 0;
+    const nextThreshold    = nextTierDef?.massThreshold ?? null;
+    const isMaxTier        = nextThreshold === null;
+
+    const tierProgress = isMaxTier
+      ? 1
+      : Math.min(1, (earned - currentThreshold) / Math.max(1, nextThreshold - currentThreshold));
+    this.tierProgressFill.width = 118 * (isNaN(tierProgress) ? 0 : tierProgress);
+
+    this.tierText.setText(
+      isMaxTier
+        ? `Act ${tier}: ${getTierName(tier)}  [MAX]`
+        : `Act ${tier}: ${getTierName(tier)}  -> ${nextThreshold}`
     );
-    this.tierProgressFill.width = 118 * tierProgress; // 120 - 2px border
-    this.tierText.setText(`Act ${tier}: ${getTierName(tier)}  → ${nextThreshold}`);
 
     // Weapon slot: burst cooldown
     if (this.combat) {
