@@ -832,13 +832,14 @@ export class GameScene extends Phaser.Scene {
 
     // "Systems damaged. Repair protocol initiated." — fades in with delay, pulses gently
     // Positioned below title with mobile-adjusted spacing
-    const narrationY = isMobile ? height * 0.18 : height * 0.10 + 70;
+    const narrationY = isMobile ? height * 0.15 : height * 0.10 + 70;
     const hunger = this.add
       .text(width / 2, narrationY, "", {
         fontFamily: "monospace",
-        fontSize: isMobile ? "14px" : "18px",
+        fontSize: isMobile ? "12px" : "18px",
         color: "#ff6b6b",
         fontStyle: "italic",
+        wordWrap: { width: isMobile ? width * 0.75 : 0 },
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -889,7 +890,7 @@ export class GameScene extends Phaser.Scene {
     };
 
     // ── How to play — positioned below narration on mobile ──
-    const howY = isMobile ? narrationY + 60 : height * 0.30;
+    const howY = isMobile ? height * 0.32 : height * 0.30;
     const howHeader = this.add
       .text(width / 2, howY, "HOW TO PLAY", {
         fontFamily: "monospace",
@@ -907,11 +908,12 @@ export class GameScene extends Phaser.Scene {
       "Consume debris to repair your systems.",
     ];
 
-    const instrFontSize = isMobile ? "12px" : "15px";
-    const instrSpacing = isMobile ? 18 : 24;
+    const instrFontSize = isMobile ? "11px" : "15px";
+    const instrSpacing = isMobile ? 16 : 24;
+    const instrStartY = isMobile ? height * 0.38 : height * 0.30 + 30;
     for (let i = 0; i < instructions.length; i++) {
       const line = this.add
-        .text(width / 2, howY + 25 + i * instrSpacing, instructions[i], {
+        .text(width / 2, instrStartY + i * instrSpacing, instructions[i], {
           fontFamily: "monospace",
           fontSize: instrFontSize,
           color: "#999",
@@ -960,7 +962,7 @@ export class GameScene extends Phaser.Scene {
       }
     } else {
       // Mobile: show simplified touch hint
-      const touchY = narrationY + 90;
+      const touchY = height * 0.50;
       const touchHint = this.add
         .text(width / 2, touchY, "LEFT SIDE: Move  |  RIGHT SIDE: Fire", {
           fontFamily: "monospace",
