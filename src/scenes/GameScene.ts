@@ -804,6 +804,7 @@ export class GameScene extends Phaser.Scene {
 
     const { width, height } = this.scale;
     const objects: Phaser.GameObjects.GameObject[] = [];
+    const isMobile = this.inputManager.isMobile;
 
     // Semi-transparent overlay — starfield visible behind
     objects.push(
@@ -813,14 +814,15 @@ export class GameScene extends Phaser.Scene {
         .setDepth(800)
     );
 
-    // Title
+    // Title — smaller on mobile
+    const titleSize = isMobile ? "36px" : "56px";
     const title = this.add
-      .text(width / 2, height * 0.10, "I must grow.", {
+      .text(width / 2, height * 0.08, "I must grow.", {
         fontFamily: "monospace",
-        fontSize: "56px",
+        fontSize: titleSize,
         color: "#ffd93d",
         stroke: "#000",
-        strokeThickness: 6,
+        strokeThickness: 4,
         fontStyle: "italic",
       })
       .setOrigin(0.5)
@@ -829,10 +831,12 @@ export class GameScene extends Phaser.Scene {
     objects.push(title);
 
     // "Systems damaged. Repair protocol initiated." — fades in with delay, pulses gently
+    // Positioned below title with mobile-adjusted spacing
+    const narrationY = isMobile ? height * 0.18 : height * 0.10 + 70;
     const hunger = this.add
-      .text(width / 2, height * 0.10 + 70, "", {
+      .text(width / 2, narrationY, "", {
         fontFamily: "monospace",
-        fontSize: "18px",
+        fontSize: isMobile ? "14px" : "18px",
         color: "#ff6b6b",
         fontStyle: "italic",
       })
@@ -884,11 +888,12 @@ export class GameScene extends Phaser.Scene {
       });
     };
 
-    // ── How to play ──
+    // ── How to play — positioned below narration on mobile ──
+    const howY = isMobile ? narrationY + 60 : height * 0.30;
     const howHeader = this.add
-      .text(width / 2, height * 0.30, "HOW TO PLAY", {
+      .text(width / 2, howY, "HOW TO PLAY", {
         fontFamily: "monospace",
-        fontSize: "18px",
+        fontSize: isMobile ? "14px" : "18px",
         color: "#6c63ff",
       })
       .setOrigin(0.5)
@@ -902,11 +907,13 @@ export class GameScene extends Phaser.Scene {
       "Consume debris to repair your systems.",
     ];
 
+    const instrFontSize = isMobile ? "12px" : "15px";
+    const instrSpacing = isMobile ? 18 : 24;
     for (let i = 0; i < instructions.length; i++) {
       const line = this.add
-        .text(width / 2, height * 0.30 + 30 + i * 24, instructions[i], {
+        .text(width / 2, howY + 25 + i * instrSpacing, instructions[i], {
           fontFamily: "monospace",
-          fontSize: "15px",
+          fontSize: instrFontSize,
           color: "#999",
         })
         .setOrigin(0.5)
@@ -916,45 +923,64 @@ export class GameScene extends Phaser.Scene {
       fadeIn(line, 500 + i * 80);
     }
 
-    // ── Controls ──
-    const ctrlHeader = this.add
-      .text(width / 2, height * 0.50, "CONTROLS", {
-        fontFamily: "monospace",
-        fontSize: "18px",
-        color: "#6c63ff",
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(801);
-    objects.push(ctrlHeader);
-    fadeIn(ctrlHeader, 650);
-
-    const controls = [
-      "WASD / Left Stick ····· Move",
-      "SPACE / A ············· Burst Fire",
-      "SHIFT / RT ············ Boost",
-      "ESC / Start ··········· Settings",
-    ];
-
-    for (let i = 0; i < controls.length; i++) {
-      const line = this.add
-        .text(width / 2, height * 0.50 + 30 + i * 24, controls[i], {
+    // ── Controls — desktop/gamepad only (not on mobile) ──
+    if (!isMobile) {
+      const ctrlY = height * 0.50;
+      const ctrlHeader = this.add
+        .text(width / 2, ctrlY, "CONTROLS", {
           fontFamily: "monospace",
-          fontSize: "14px",
-          color: "#999",
+          fontSize: "18px",
+          color: "#6c63ff",
         })
         .setOrigin(0.5)
         .setScrollFactor(0)
         .setDepth(801);
-      objects.push(line);
-      fadeIn(line, 730 + i * 80);
+      objects.push(ctrlHeader);
+      fadeIn(ctrlHeader, 650);
+
+      const controls = [
+        "WASD / Left Stick ····· Move",
+        "SPACE / A ············· Burst Fire",
+        "SHIFT / RT ············ Boost",
+        "ESC / Start ··········· Settings",
+      ];
+
+      for (let i = 0; i < controls.length; i++) {
+        const line = this.add
+          .text(width / 2, ctrlY + 30 + i * 24, controls[i], {
+            fontFamily: "monospace",
+            fontSize: "14px",
+            color: "#999",
+          })
+          .setOrigin(0.5)
+          .setScrollFactor(0)
+          .setDepth(801);
+        objects.push(line);
+        fadeIn(line, 730 + i * 80);
+      }
+    } else {
+      // Mobile: show simplified touch hint
+      const touchY = narrationY + 90;
+      const touchHint = this.add
+        .text(width / 2, touchY, "LEFT SIDE: Move  |  RIGHT SIDE: Fire", {
+          fontFamily: "monospace",
+          fontSize: "12px",
+          color: "#6c63ff",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(801);
+      objects.push(touchHint);
+      fadeIn(touchHint, 500);
     }
 
     // ── Start prompt — pulses ──
+    const promptY = isMobile ? height * 0.75 : height * 0.82;
+    const promptText = isMobile ? "[ TAP ANYWHERE TO BEGIN ]" : "[ PRESS SPACE OR ANY BUTTON TO BEGIN ]";
     const prompt = this.add
-      .text(width / 2, height * 0.82, "[ PRESS SPACE OR ANY BUTTON TO BEGIN ]", {
+      .text(width / 2, promptY, promptText, {
         fontFamily: "monospace",
-        fontSize: "18px",
+        fontSize: isMobile ? "14px" : "18px",
         color: "#4ecdc4",
       })
       .setOrigin(0.5)
