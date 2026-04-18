@@ -34,7 +34,11 @@ export class Player {
     g.generateTexture(textureKey, 64, 64);
     g.destroy();
 
-    this.body = scene.physics.add.sprite(PLAYER_SPAWN_X, PLAYER_SPAWN_Y, textureKey);
+    this.body = scene.physics.add.sprite(
+      PLAYER_SPAWN_X,
+      PLAYER_SPAWN_Y,
+      textureKey,
+    );
     this.body.setScale(this.size / 32);
 
     scene.cameras.main.startFollow(this.body, true, 1, 1);
@@ -49,17 +53,19 @@ export class Player {
     g: Phaser.GameObjects.Graphics,
     cx: number,
     cy: number,
-    radius: number
+    radius: number,
   ): void {
     g.fillStyle(COLORS.station);
     const sides = 8;
     const points: Phaser.Geom.Point[] = [];
     for (let i = 0; i < sides; i++) {
       const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-      points.push(new Phaser.Geom.Point(
-        cx + Math.cos(angle) * radius * 0.7,
-        cy + Math.sin(angle) * radius * 0.7
-      ));
+      points.push(
+        new Phaser.Geom.Point(
+          cx + Math.cos(angle) * radius * 0.7,
+          cy + Math.sin(angle) * radius * 0.7,
+        ),
+      );
     }
     g.fillPoints(points, true);
     g.lineStyle(2, COLORS.stationGlow, 0.6);
@@ -77,7 +83,7 @@ export class Player {
       g.destroy();
     }
     this.thrustEmitter = this.scene.add.particles(0, 0, "particle", {
-      speed: { min: 20, max: 60 },
+      speed: { min: 40, max: 40 },
       radial: false,
       scale: { start: 0.4, end: 0 },
       tint: COLORS.energy,
@@ -86,6 +92,15 @@ export class Player {
       frequency: 50,
       follow: this.body,
       emitting: false,
+      emitCallback: (particle: Phaser.GameObjects.Particles.Particle) => {
+        const vel = (this.body.body as Phaser.Physics.Arcade.Body).velocity;
+        const mx = this.input.moveX;
+        const my = this.input.moveY;
+        // Match player velocity so particle appears stationary relative to player,
+        // then add exhaust kick opposite to acceleration direction
+        particle.velocityX = vel.x + -mx * 100;
+        particle.velocityY = vel.y + -my * 100;
+      },
     });
   }
 
@@ -102,17 +117,15 @@ export class Player {
     const boostMult = this.isBoosting ? 2.0 : 1.0;
     const accel = this.speed * 8 * boostMult;
 
-    this.body.setAccelerationX(mx !== 0 ? Math.sign(mx) * accel * Math.abs(mx) : 0);
-    this.body.setAccelerationY(my !== 0 ? Math.sign(my) * accel * Math.abs(my) : 0);
-
+    this.body.setAccelerationX(
+      mx !== 0 ? Math.sign(mx) * accel * Math.abs(mx) : 0,
+    );
+    this.body.setAccelerationY(
+      my !== 0 ? Math.sign(my) * accel * Math.abs(my) : 0,
+    );
 
     if (this.thrustEmitter) {
       this.thrustEmitter.emitting = this.input.isMoving;
-
-      // Set particle direction opposite to acceleration for rocket-like effect
-      if (this.input.isMoving) {
-        this.thrustEmitter.setParticleSpeed(-mx * 40, -my * 40);
-      }
     }
   }
 
@@ -122,12 +135,18 @@ export class Player {
     body.velocity.y += gy;
   }
 
-  getParticleEmitter(): Phaser.GameObjects.Particles.ParticleEmitter | undefined {
+  getParticleEmitter():
+    | Phaser.GameObjects.Particles.ParticleEmitter
+    | undefined {
     return this.thrustEmitter;
   }
 
-  get x(): number { return this.body.x; }
-  get y(): number { return this.body.y; }
+  get x(): number {
+    return this.body.x;
+  }
+  get y(): number {
+    return this.body.y;
+  }
 
   setSize(newSize: number): void {
     this.size = newSize;
