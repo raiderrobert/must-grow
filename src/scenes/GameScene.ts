@@ -302,7 +302,9 @@ export class GameScene extends Phaser.Scene {
     // (player position set dynamically in spawnNearEarth below)
 
     // Starting zoom: keeps player ~6px on screen, Earth arc visible at bottom
-    this.cameras.main.setZoom(ZOOM_START);
+    // Mobile gets zoomed out 40% more for better visibility
+    const initialZoom = this.inputManager.isMobile ? ZOOM_START * 0.6 : ZOOM_START;
+    this.cameras.main.setZoom(initialZoom);
 
     this.showStartScreen();
   }
