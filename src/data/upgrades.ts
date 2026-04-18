@@ -1,5 +1,5 @@
 import type { ResourceManager } from "@/systems/ResourceManager";
-import type { PlayerStation } from "@/entities/PlayerStation";
+import type { Player } from "@/entities/Player";
 import type { CombatSystem } from "@/systems/CombatSystem";
 
 export type UpgradeRarity = "common" | "uncommon" | "rare";
@@ -12,7 +12,7 @@ export interface UpgradeCard {
   /** Act at which this card enters the draw pool (1–5). */
   act: number;
   /** Applied immediately when the card is chosen. */
-  apply(combat: CombatSystem, resources: ResourceManager, player: PlayerStation): void;
+  apply(combat: CombatSystem, resources: ResourceManager, player: Player): void;
 }
 
 export const UPGRADE_CARDS: UpgradeCard[] = [

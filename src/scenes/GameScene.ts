@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { COLORS, WORLD_CENTER_X, WORLD_CENTER_Y, PLAYER_START_SIZE, PLAYER_THRUST_POWER, GRAVITY_SCALE, GRAVITY_CONSTANT, ZOOM_START, ZOOM_MIN, ORBIT_SPEED_SCALE, DEBRIS_ORBIT_SPEED_MULT } from "@/constants";
 import { createStarfield, updateStarfield } from "@/entities/Starfield";
-import { PlayerStation } from "@/entities/PlayerStation";
+import { Player } from "@/entities/Player";
 import { ResourceManager } from "@/systems/ResourceManager";
 import { GravitySystem } from "@/systems/GravitySystem";
 import { ZoneManager } from "@/systems/ZoneManager";
@@ -36,7 +36,7 @@ interface TrackedBody {
 }
 
 export class GameScene extends Phaser.Scene {
-  player!: PlayerStation;
+  player!: Player;
   resources!: ResourceManager;
   gravity!: GravitySystem;
   zones!: ZoneManager;
@@ -80,7 +80,7 @@ export class GameScene extends Phaser.Scene {
     this.resources = new ResourceManager();
     this.gravity = new GravitySystem();
     this.zones = new ZoneManager(this, this.gravity);
-    this.player = new PlayerStation(this);
+    this.player = new Player(this);
 
     this.gravity.initGraphics(this);
 

@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { drawCards, type UpgradeCard } from "@/data/upgrades";
 import type { CombatSystem } from "@/systems/CombatSystem";
 import type { ResourceManager } from "@/systems/ResourceManager";
-import type { PlayerStation } from "@/entities/PlayerStation";
+import type { Player } from "@/entities/Player";
 import type { AudioManager } from "@/systems/AudioManager";
 import type { InputManager } from "@/systems/InputManager";
 
@@ -16,7 +16,7 @@ export class UpgradeScreen {
   private scene: Phaser.Scene;
   private combat: CombatSystem;
   private resources: ResourceManager;
-  private player: PlayerStation;
+  private player: Player;
   private audio: AudioManager | null;
   private inputManager: InputManager | null;
   private container: Phaser.GameObjects.Container | null = null;
@@ -37,7 +37,7 @@ export class UpgradeScreen {
     scene: Phaser.Scene,
     combat: CombatSystem,
     resources: ResourceManager,
-    player: PlayerStation,
+    player: Player,
     audio: AudioManager | null = null,
     inputManager: InputManager | null = null
   ) {

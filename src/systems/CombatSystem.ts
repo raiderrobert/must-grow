@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { PlayerStation } from "@/entities/PlayerStation";
+import { Player } from "@/entities/Player";
 import { SpaceObject } from "@/entities/SpaceObject";
 import { Debris } from "@/entities/Debris";
 import { ResourceManager } from "@/systems/ResourceManager";
@@ -9,7 +9,7 @@ import type { AudioManager } from "@/systems/AudioManager";
 
 export class CombatSystem {
   private scene: Phaser.Scene;
-  private player: PlayerStation;
+  private player: Player;
   private resources: ResourceManager;
   private zones: ZoneManager;
   private audio: AudioManager | null = null;
@@ -48,7 +48,7 @@ export class CombatSystem {
 
   constructor(
     scene: Phaser.Scene,
-    player: PlayerStation,
+    player: Player,
     resources: ResourceManager,
     zones: ZoneManager
   ) {

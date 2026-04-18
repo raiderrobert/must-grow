@@ -8,7 +8,7 @@ import {
 } from "@/constants";
 import type { InputManager } from "@/systems/InputManager";
 
-export class PlayerStation {
+export class Player {
   body: Phaser.Physics.Arcade.Sprite;
   size: number;
   tier: number = 1;
@@ -78,6 +78,7 @@ export class PlayerStation {
     }
     this.thrustEmitter = this.scene.add.particles(0, 0, "particle", {
       speed: { min: 20, max: 60 },
+      radial: false,
       scale: { start: 0.4, end: 0 },
       tint: COLORS.energy,
       lifespan: 300,
@@ -104,8 +105,14 @@ export class PlayerStation {
     this.body.setAccelerationX(mx !== 0 ? Math.sign(mx) * accel * Math.abs(mx) : 0);
     this.body.setAccelerationY(my !== 0 ? Math.sign(my) * accel * Math.abs(my) : 0);
 
+
     if (this.thrustEmitter) {
       this.thrustEmitter.emitting = this.input.isMoving;
+
+      // Set particle direction opposite to acceleration for rocket-like effect
+      if (this.input.isMoving) {
+        this.thrustEmitter.setParticleSpeed(-mx * 40, -my * 40);
+      }
     }
   }
 
