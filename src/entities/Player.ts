@@ -98,8 +98,8 @@ export class Player {
         const my = this.input.moveY;
         // Match player velocity so particle appears stationary relative to player,
         // then add exhaust kick opposite to acceleration direction
-        particle.velocityX = vel.x + -mx * 100;
-        particle.velocityY = vel.y + -my * 100;
+        particle.velocityX = vel.x + -mx * 150;
+        particle.velocityY = vel.y + -my * 150;
       },
     });
   }
@@ -126,6 +126,13 @@ export class Player {
 
     if (this.thrustEmitter) {
       this.thrustEmitter.emitting = this.input.isMoving;
+
+      // Position emitter at the edge opposite to acceleration direction
+      if (this.input.isMoving) {
+        const len = Math.sqrt(mx * mx + my * my) || 1;
+        this.thrustEmitter.followOffset.x = (-mx / len) * this.size;
+        this.thrustEmitter.followOffset.y = (-my / len) * this.size;
+      }
     }
   }
 
