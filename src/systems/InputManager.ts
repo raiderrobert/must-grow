@@ -1,6 +1,7 @@
 import Phaser from "phaser";
+import { MobileControls } from "@/ui/MobileControls";
 
-export type InputType = "keyboard" | "gamepad";
+export type InputType = "keyboard" | "gamepad" | "touch";
 
 /**
  * Single source of truth for all player input.
@@ -8,8 +9,8 @@ export type InputType = "keyboard" | "gamepad";
  * Everything else reads from here — nothing registers its own keys.
  *
  * Bindings:
- *   Move:   WASD / Arrow keys  |  Left stick
- *   Burst:  Space / J          |  A (button 0)
+ *   Move:   WASD / Arrow keys  |  Left stick  |  Touch joystick
+ *   Burst:  Space / J          |  A (button 0)  |  Right tap
  *   Boost:  Shift              |  LT (button 6)
  */
 export class InputManager {
@@ -29,6 +30,10 @@ export class InputManager {
   private _attackJustPressed: boolean = false;
   private _menuJustPressed: boolean = false;
   private menuKey!: Phaser.Input.Keyboard.Key;
+
+  // Mobile controls
+  private mobileControls: MobileControls | null = null;
+  readonly isMobile: boolean;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -56,6 +61,16 @@ export class InputManager {
     scene.input.keyboard!.on("keydown", () => {
       this._lastInputType = "keyboard";
     });
+
+    // Mobile detection
+    this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (this.isMobile) {
+      this.mobileControls = new MobileControls(scene);
+      scene.events.on("touchAttack", () => {
+        this._attackJustPressed = true;
+        this._lastInputType = "touch";
+      });
+    }
 
     // Gamepad
     if (scene.input.gamepad) {
@@ -92,6 +107,11 @@ export class InputManager {
       if (this.pad) this._lastInputType = "gamepad";
     }
 
+    // Touch joystick activity
+    if (this.mobileControls?.isActive) {
+      this._lastInputType = "touch";
+    }
+
     // Keyboard attack keys
     if (this.attackKeys.some((k) => Phaser.Input.Keyboard.JustDown(k))) {
       this._attackJustPressed = true;
@@ -111,6 +131,7 @@ export class InputManager {
     if (Math.abs(stick) > 0.2) return stick;
     if (this.cursors.left.isDown || this.wasd.A.isDown) return -1;
     if (this.cursors.right.isDown || this.wasd.D.isDown) return 1;
+    if (this.mobileControls?.isActive) return this.mobileControls.moveX;
     return 0;
   }
 
@@ -120,6 +141,7 @@ export class InputManager {
     if (Math.abs(stick) > 0.2) return stick;
     if (this.cursors.up.isDown || this.wasd.W.isDown) return -1;
     if (this.cursors.down.isDown || this.wasd.S.isDown) return 1;
+    if (this.mobileControls?.isActive) return this.mobileControls.moveY;
     return 0;
   }
 
@@ -160,6 +182,9 @@ export class InputManager {
   }
   get isKeyboard(): boolean {
     return this._lastInputType === "keyboard";
+  }
+  get isTouch(): boolean {
+    return this._lastInputType === "touch";
   }
   /** Expose gamepad for upgrade screen confirmation polling. */
   get gamepad(): Phaser.Input.Gamepad.Gamepad | null {
